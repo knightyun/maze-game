@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>maze2</title>
+</head>
+<body>
+    <canvas id="c2d" class="c2d" width="390" height="290"></canvas>
+    <script>
+        var oC2 = document.getElementById('c2d');
+        var ctx = oC2.getContext('2d');
+
+        var width = oC2.width;
+        var height = oC2.height;
+        var maxX = 36;
+        var maxY = 26;
+
+        var firstGrid;
+        var endGrid;
+
+        function Grid(x, y) {
+            this.x = x;
+            this.y = y;
+            this.isClear = false;
+            this.choosed = false;
+            this.initNeighbor();
+
+            this.nextX = 0;
+            this.nextY = 0;
+        }
+
+        Grid.prototype.initNeighbor = function() {
+            var x = this.x;
+            var y = this.y;
+
+            this.neighbor = [];
+
+            if(y > 0) {
+                this.neighbor.push({
+                   x: x,
+                   y: y - 2
+                });
+            }
+
+            if(y < maxY) {
+                this.neighbor.push({
+                    x: x,
+                    y: y + 2
+                });
+            }
+
+            if(x > 0) {
+                this.neighbor.push({
+                   x: x - 2,
+                   y: y 
+                });
+            }
+
+            if(x < maxX) {
+                this.neighbor.push({
+                   x: x + 2,
+                   y: y
+                });
+            }
+
+            this.neighbor.sort(function() {
+                return 0.5 - Math.random();
+            });
+        };
+
+        Grid.prototype.getNeighbor = function() {
+            var x, y, neighbor, ret = [];
+
+            this.choosed = true;
+
+            for(var i = 0; i < this.neighbor.length; i++) {
+                x = this.neighbor[i].x;
+                y = this.neighbor[i].y;
+
+                neighbor = maze.grids[y][x];
+
+                neighbor.wallX = this.x + (x - this.x)/2;
+                neighbor.wallY = this.y + (y - this.y)/2;
+
+                if(!neighbor.choosed) {
+                    ret.push(neighbor);
+                }
+            }
+
+            return ret;
+        };
+
+        function Maze() {
+            this.path = [];
+            this.grids = [];
+            this.stack = [];
+
+            this.walls = [];
+
+            this.init();
+        }
+
+        Maze.prototype.init = function() {
+            for(var i = 0; i <= maxY; i++) {
+                this.grids[i] = [];
+                for(var j = 0; j <= maxX; j++) {
+                    this.grids[i][j] = new Grid(j, i);
+                }
+            }
+
+            firstGrid = this.grids[0][0];
+            endGrid = this.grids[26][36];
+        };
+
+        Maze.prototype.findPath = function() {
+            var tmp;
+            var curr = firstGrid;
+            var index;
+            var walls = this.walls;
+
+            tmp = curr.getNeighbor();
+
+            curr.isClear = true;
+
+            walls.push.apply(walls, tmp);
+
+            while(walls.length) {
+                index = (Math.random() * walls.length) >> 0;
+
+                wall = walls[index];
+
+                if(!wall.isClear) {
+                    wall.isClear = true;
+
+                    this.path.push({
+                        x: wall.wallX,
+                        y: wall.wallY
+                    });
+
+                    tmp = wall.getNeighbor();
+
+                    walls.push.apply(walls, tmp);
+                } else {
+                    walls.splice(index, 1);
+                }
+            }
+
+            console.log('路径找寻结束', this.path);
+        };
+
+        Maze.prototype.drawPath = function() {
+            var i;
+
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, oC2.width, oC2.height);
+
+            ctx.fillStyle = 'black';
+
+            for(i = 0; i <= 290; i+=20) {
+                ctx.fillRect(0, i, 390, 10);
+            }
+
+            for(i = 0; i <= 390; i+=20) {
+                ctx.fillRect(i, 0, 10, 290);
+            }
+
+            ctx.fillStyle = 'white';
+
+            for(i = 0; i < this.path.length; i++) {
+                ctx.fillRect(10 + this.path[i].x * 10, 10 + this.path[i].y * 10, 10, 10);
+            }
+        };
+
+        var maze = new Maze();
+
+        maze.findPath();
+
+        maze.drawPath();
+
+        drawStartEnd();
+
+        function drawStartEnd() {
+            ctx.fillRect(0, 10, 10, 10);
+            ctx.fillRect(19 * 20, 13 * 20 + 10, 10, 10);
+        }
+    </script>
+</body>
+</html>
