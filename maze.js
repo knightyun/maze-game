@@ -1,5 +1,5 @@
 /*
-    迷宫特点：2
+    迷宫特点：
         路与墙成对出现；
         经历保证长宽都为奇数；
 
@@ -105,7 +105,7 @@ class Maze {
 
         // 调整 canvas 元素尺寸
         elMaze.width = w,
-        elMaze.height = h;
+            elMaze.height = h;
 
         // 绘画初始迷宫，包括围墙，出入口，
         // 并初始化每个单元格的信息
@@ -119,12 +119,12 @@ class Maze {
                     y: y,
                     // 判断是否为围墙：单元格是不包括出、入口的围墙格子
                     isWall: (x === 0 || y === 0 ||
-                             x === w / step - 1 ||
-                             y === h / step - 1) &&
-                            !((x === entrance.x &&
-                               y === entrance.y) ||
-                              (x === exit.x &&
-                               y === exit.y)),
+                            x === w / step - 1 ||
+                            y === h / step - 1) &&
+                        !((x === entrance.x &&
+                                y === entrance.y) ||
+                            (x === exit.x &&
+                                y === exit.y)),
                     // 判断是否为路：后期画路时置为 true
                     isPath: false
                 }
@@ -158,10 +158,17 @@ class Maze {
      */
     getForwardGrid(x1, y1, x2, y2) {
         var fwdGrid = {};
+<<<<<<< HEAD
         
         fwdGrid.x = 2 * x2 - x1,
         fwdGrid.y = 2 * y2 - y1;
         
+=======
+
+        fwdGrid.x = 2 * x2 - x1,
+            fwdGrid.y = 2 * y2 - y1;
+
+>>>>>>> branch 'master' of https://github.com/knightyun/maze-game.git
         return fwdGrid;
     }
 
@@ -183,21 +190,28 @@ class Maze {
 
         var mazeGrids = this.mazeGrids,
             neighbors = [];
+<<<<<<< HEAD
             
+=======
+
+>>>>>>> branch 'master' of https://github.com/knightyun/maze-game.git
         // 4 个领居
         var top = {
-            x: x,
-            y: y - 1
-        }, bottom = {
-            x: x,
-            y: y + 1
-        }, left = {
-            x: x - 1,
-            y: y
-        }, right = {
-            x: x + 1,
-            y: y
-        }
+                x: x,
+                y: y - 1
+            },
+            bottom = {
+                x: x,
+                y: y + 1
+            },
+            left = {
+                x: x - 1,
+                y: y
+            },
+            right = {
+                x: x + 1,
+                y: y
+            }
 
         neighbors.push(top, bottom, left, right);
         neighbors = neighbors.filter(item => {
@@ -210,7 +224,11 @@ class Maze {
                     mazeGrids[_y][_x].isPath);
 
             // 修改：排除围墙和前方是路的格子
+<<<<<<< HEAD
             
+=======
+
+>>>>>>> branch 'master' of https://github.com/knightyun/maze-game.git
             // 排除无效领居（不存在、为墙、为路）
             if (isValidGrid) {
                 // 判断该领居是否可取
@@ -260,7 +278,11 @@ class Maze {
 
         return neighbors;
     }
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> branch 'master' of https://github.com/knightyun/maze-game.git
     // delete
     getNeighborArounds(x, y, direction) {
         var arounds = [],
