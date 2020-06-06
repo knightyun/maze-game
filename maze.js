@@ -11,7 +11,9 @@
         寻路时只能以两格为单位前进；
         最多三个方向，每次一个方向前进两个
         
-    起步位置：(0, 1)
+    起步位置
+        (1, 1)；
+        然后开始每次行进两格；
 
     候选路径：
         一个单元格有上下左右四个方向；
@@ -32,6 +34,7 @@
 
     停止：
         前进方向全为墙或路时停止；
+        出入口视为围墙；
         全部分叉寻路停止时画迷宫结束；
 
     难度等级：
@@ -102,7 +105,7 @@ class Maze {
 
         // 调整 canvas 元素尺寸
         elMaze.width = w,
-        elMaze.height = h;
+            elMaze.height = h;
 
         // 绘画初始迷宫，包括围墙，出入口，
         // 并初始化每个单元格的信息
@@ -116,12 +119,12 @@ class Maze {
                     y: y,
                     // 判断是否为围墙：单元格是不包括出、入口的围墙格子
                     isWall: (x === 0 || y === 0 ||
-                             x === w / step - 1 ||
-                             y === h / step - 1) &&
-                            !((x === entrance.x &&
-                               y === entrance.y) ||
-                              (x === exit.x &&
-                               y === exit.y)),
+                            x === w / step - 1 ||
+                            y === h / step - 1) &&
+                        !((x === entrance.x &&
+                                y === entrance.y) ||
+                            (x === exit.x &&
+                                y === exit.y)),
                     // 判断是否为路：后期画路时置为 true
                     isPath: false
                 }
@@ -146,13 +149,20 @@ class Maze {
     /**
      * 获取候选方向的“前面”一个格子
      *
-     * @param {number} x 当前格子的 x 坐标
-     * @param {number} y 当前格子的 y 坐标
-     * @returns {object} 格子对象
+     * @param {number} x1 当前格子的 x 坐标
+     * @param {number} y1 当前格子的 y 坐标
+     * @param {number} x2 候选方向的 x 坐标
+     * @param {number} y2 候选方向的 y 坐标
+     * @returns {object} 包含坐标的格子对象
      * @memberof Maze
      */
-    getForwardGrid(x, y) {
-        return null;
+    getForwardGrid(x1, y1, x2, y2) {
+        var fwdGrid = {};
+
+        fwdGrid.x = 2 * x2 - x1,
+            fwdGrid.y = 2 * y2 - y1;
+
+        return fwdGrid;
     }
 
     /**
@@ -169,40 +179,43 @@ class Maze {
         // 无效领居：
         //   格子为围墙
         //   格子前面是路
-        // 如果领居数为 0，则寻路结束；
-
-        // 格子周围第二层某领居为墙或路，
-        // 则不选取对应的第一层某领居；
-        // 第二层存在墙或路时，路径需分叉；
+        // 如果领居数为 0，则寻路结束； 
 
         var mazeGrids = this.mazeGrids,
             neighbors = [];
+
         // 4 个领居
         var top = {
-            x: x,
-            y: y - 1
-        }, bottom = {
-            x: x,
-            y: y + 1
-        }, left = {
-            x: x - 1,
-            y: y
-        }, right = {
-            x: x + 1,
-            y: y
-        }
+                x: x,
+                y: y - 1
+            },
+            bottom = {
+                x: x,
+                y: y + 1
+            },
+            left = {
+                x: x - 1,
+                y: y
+            },
+            right = {
+                x: x + 1,
+                y: y
+            }
 
         neighbors.push(top, bottom, left, right);
         neighbors = neighbors.filter(item => {
             var _x = item.x,
                 _y = item.y;
-            var bol = !!mazeGrids[_y] &&
+            // 是否为有效方向
+            var isValidGrid = !!mazeGrids[_y] &&
                 !!mazeGrids[_y][_x] &&
                 !(mazeGrids[_y][_x].isWall ||
                     mazeGrids[_y][_x].isPath);
 
+            // 修改：排除围墙和前方是路的格子
+
             // 排除无效领居（不存在、为墙、为路）
-            if (bol) {
+            if (isValidGrid) {
                 // 判断该领居是否可取
 
                 // 先判断该领居位于的方位:
@@ -251,6 +264,7 @@ class Maze {
         return neighbors;
     }
 
+    // delete
     getNeighborArounds(x, y, direction) {
         var arounds = [],
             frontLeft = null, // 左前方
@@ -353,8 +367,8 @@ class Maze {
         return arounds;
     }
 
+    // 在已有领居中随机选取一个领居返回
     getRandomNeighbor(neighbors) {
-        // 在已有领居中随机选取一个领居返回
         var len = neighbors.length;
         var idx = Math.round(Math.random() * (len - 1));
         // this.fill(neighbors[idx].x, neighbors[idx].y, 'yellow');
@@ -363,6 +377,7 @@ class Maze {
         else return neighbors[idx];
     }
 
+    // 画围墙
     drawWall() {
         this.mazeGrids.forEach(y => {
             y.forEach(x => {
@@ -371,6 +386,8 @@ class Maze {
         })
     }
 
+    // 挖路
+    // todo: 实现前进两格
     drawPath(grid) {
         var ctx = arguments[1] || this;
         var x = grid.x,
