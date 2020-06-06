@@ -9,7 +9,7 @@
 
     寻路：
         寻路时只能以两格为单位前进；
-        最多三个方向，同一轴方向进两次；
+        最多三个方向，每次一个方向前进两个
         
     起步位置：(0, 1)
 
@@ -53,15 +53,17 @@ var ctx = cvs.getContext('2d');
 class Maze {
     /**
      * @constructor
-     * @param {number} w 迷宫宽度
-     * @param {number} h 迷宫高度
-     * @param {*} step   单元格大小
+     * @param {Element} elMaze 承载迷宫的元素
+     * @param {number}  w      迷宫宽度
+     * @param {number}  h      迷宫高度
+     * @param {*}       step   单元格大小
      * @memberof Maze
      */
-    constructor(w, h, step) {
+    constructor(elMaze, w, h, step) {
         this.w = w;
         this.h = h;
         this.step = step;
+        this.elMaze = elMaze;
 
         // 包含所有格子的二维数组
         this.mazeGrids = [];
@@ -93,13 +95,14 @@ class Maze {
             w = this.w,
             h = this.h,
             step = this.step,
+            elMaze = this.elMaze,
             entrance = this.entrance,
             exit = this.exit,
             x, y;
 
         // 调整 canvas 元素尺寸
-        cvs.width = w,
-        cvs.height = h;
+        elMaze.width = w,
+        elMaze.height = h;
 
         // 绘画初始迷宫，包括围墙，出入口，
         // 并初始化每个单元格的信息
