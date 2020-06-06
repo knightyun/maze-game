@@ -158,17 +158,10 @@ class Maze {
      */
     getForwardGrid(x1, y1, x2, y2) {
         var fwdGrid = {};
-<<<<<<< HEAD
         
         fwdGrid.x = 2 * x2 - x1,
         fwdGrid.y = 2 * y2 - y1;
         
-=======
-
-        fwdGrid.x = 2 * x2 - x1,
-            fwdGrid.y = 2 * y2 - y1;
-
->>>>>>> branch 'master' of https://github.com/knightyun/maze-game.git
         return fwdGrid;
     }
 
@@ -190,11 +183,7 @@ class Maze {
 
         var mazeGrids = this.mazeGrids,
             neighbors = [];
-<<<<<<< HEAD
-            
-=======
 
->>>>>>> branch 'master' of https://github.com/knightyun/maze-game.git
         // 4 个领居
         var top = {
                 x: x,
@@ -224,11 +213,7 @@ class Maze {
                     mazeGrids[_y][_x].isPath);
 
             // 修改：排除围墙和前方是路的格子
-<<<<<<< HEAD
-            
-=======
 
->>>>>>> branch 'master' of https://github.com/knightyun/maze-game.git
             // 排除无效领居（不存在、为墙、为路）
             if (isValidGrid) {
                 // 判断该领居是否可取
@@ -278,11 +263,7 @@ class Maze {
 
         return neighbors;
     }
-<<<<<<< HEAD
     
-=======
-
->>>>>>> branch 'master' of https://github.com/knightyun/maze-game.git
     // delete
     getNeighborArounds(x, y, direction) {
         var arounds = [],
