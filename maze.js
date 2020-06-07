@@ -80,12 +80,6 @@ class Maze {
             y: h / step - 1
         }
 
-        // 挖路起始位置
-        this.start = {
-            x: 1,
-            y: 1
-        }
-
         this.init();
     }
 
@@ -140,7 +134,7 @@ class Maze {
         this.drawWall('black', 'white');
 
         // 挖路
-        this.drawPath(this.start);
+        this.drawPath(entrance, {x:1, y:-1});
     }
 
     /**
@@ -185,7 +179,7 @@ class Maze {
      *
      * @param   {*} x   当前格子 x 坐标
      * @param   {*} y   当前格子 y 坐标
-     * @returns {Array} 有效的候选方向
+     * @returns {Array} 有效的候选方向（格子对象）
      * @memberof Maze
      */
     getValidDirections(x, y) {
@@ -229,20 +223,31 @@ class Maze {
             // 是否为有效方向（按顺序判断）：
             //     格子存在；
             //     格子不是围墙；
-            //     前方格子存在
+            //     格子不是路；
+            //     前方格子存在；
             //     前方格子不是路；
             var isValidDirection,
+                isExist,
                 isWall,
+                isPath,
+                isFrontExist,
                 isFrontPath;
 
-            isWall = !!mazeGrids[_y] && !!mazeGrids[_y][_x] &&
-                     _x === 0 || _x === this.w ||
-                     _y === 0 || _y === this.h;
-            
-            isFrontPath = this.getForwardGrid(x, y, _x, _y) &&
-                          this.getForwardGrid(x, y, _x, _y).isPath;
+            isExist = !!mazeGrids[_y] && !!mazeGrids[_y][_x];
+            isFrontExist = !!this.getForwardGrid(x, y, _x, _y);
+            // 格子不存在直接排除
+            if (!isExist || !isFrontExist)
+                return false;
+                /*
+            isWall = _x === 0 || _x === this.w ||
+                     _y === 0 || _y === this.h;*/
+            isWall = mazeGrids[_y][_x].isWall;
+            isPath = mazeGrids[_y][_x].isPath;
+                          
+            isFrontPath = this.getForwardGrid(x, y, _x, _y).isPath;
 
-            isValidDirection = !isWall && !isFrontPath;
+            isValidDirection = !isWall && !isPath &&
+                               !isFrontPath;
 
             return isValidDirection;
         });
@@ -274,10 +279,16 @@ class Maze {
         // 随机候选方向的索引
         var idx = Math.round(Math.random() * (len - 1));
         
-        // this.fill(neighbors[idx].x, neighbors[idx].y, 'yellow');
-
-        return len === 0 ? null : directions[idx];
+        return directions[idx];
     }
+    
+    // 遇到前方是围墙，或前方的前方是路，则分叉挖路
+    // 挖完第二格路时判断，判断逻辑放在 drawPath 中；
+    // 此时最多只存在左右两个候选路径；
+    // 所以直接挖所有候选路径，避免随机获取；
+    // 该函数获取分叉后的两个格子，
+    // 再分别传给 drawPath 当做第一格继续挖
+    forkPath() {}
 
     /**
      * 绘画四周的围墙，以及出入口
@@ -307,46 +318,82 @@ class Maze {
      * 挖路实现函数，递归地绘制有效路径
      * 从 this.start 开始，到无路后结束
      *
-     * @param {object} grid 格子对象（要挖的路）
-     * @param {object} ctx  保存当前类的上下文，
-     *                      方便递归时使用当前类的方法
+     * @param {object} grid    格子对象（要挖的路）；
+     * @param {object} preGrid 前一个格子对象，
+     *                         用于获取前进两格需要的方向；
+     * @param {object} ctx     保存当前类的上下文，
+     *                         方便递归时使用当前类的方法；
      * @memberof Maze
      * @todo 一次前进两格
      */
-    drawPath(grid, ctx) {
-        var x = grid.x,
-            y = grid.y;
+    drawPath(grid, preGrid, ctx) {
+        var x    = grid.x,
+            y    = grid.y,
+            preX = preGrid.x,
+            preY = preGrid.y;
 
         ctx = ctx || this;
 
-        var mazeGrids = ctx.mazeGrids,
-            directions = ctx.getValidDirections(x, y);
+        var mazeGrids = ctx.mazeGrids;
+        
+        // 绘制路
+        ctx.fillGrid(x, y, 'red');
+        
+        // 标记当前格子为路
+        mazeGrids[y][x].isPath = true;
+        
+        // 获取前面方向的格子
+        var fwdGrid = ctx.getForwardGrid(preX, preY, x, y);
+        var fwdX = fwdGrid.x,
+            fwdY = fwdGrid.y;
+            
+        // 画同方向第二格路
+        ctx.fillGrid(fwdX, fwdY, 'red')
+        
+        mazeGrids[fwdY][fwdX].isPath = true;
+            
+        // 获取候选方向（第二格的）
+        var directions = ctx.getValidDirections(fwdX, fwdY);
         
         // 递归挖路结束
         if (directions.length === 0) {
-            elConsole.innerText = 'done';
+            elConsole.innerHTML += 'done';
             return;
         }
-
-        // 获取随机方向
+        
+        // 判断是否需要路径分叉：
+        //   第二格前方是围墙；
+        //   第二格前方的前方是路；
+        var isNeedForkPath = false;
+        
+        var isWall = ctx.getForwardGrid(x, y, fwdX, fwdY).isWall;
+        
+        isNeedForkPath = isWall;
+        
+        if (isNeedForkPath) {
+            directions.forEach(item => {
+                setTimeout(ctx.drawPath, 2000, item, mazeGrids[fwdY][fwdX], ctx);
+            })
+        } else {
+        
+        // 从候选方向中获取随机方向
         var randomDirection = ctx.getRandomDirection(directions);
 
         if (randomDirection) {
 
-            // 标记当前格子为路
-            mazeGrids[y][x].isPath = true;
-
-            // 绘制路
-            ctx.fillGrid(x, y, 'red');
-
-            // 挖下一格路
-            setTimeout(ctx.drawPath, 500, randomDirection, ctx);
+            // 挖下一格路，传递的格子应为挖的第二格路
+            setTimeout(ctx.drawPath, 0, randomDirection, mazeGrids[fwdY][fwdX], ctx);
+            //ctx.drawPath(randomDirection, mazeGrids[fwdY][fwdX], ctx);
 
         } else {
 
             // 无任何候选方向
             elConsole.innerText = 'no direction.';
         }
+        
+        }
+        
+
     }
 
 }
@@ -354,4 +401,4 @@ class Maze {
 var cvs = document.querySelector('#maze');
 var elConsole = document.querySelector('.console');
 
-var maze = new Maze(cvs, 300, 300, 10);
+var maze = new Maze(cvs, 210, 210, 10);
