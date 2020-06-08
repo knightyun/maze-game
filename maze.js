@@ -154,18 +154,92 @@ class Maze {
     }
 
     /**
-     * 获取候选方向的“前面”一个格子
+     * 获取当前格子的“前面”一个格子（相对）
      *
-     * @param {number} x1 当前格子的 x 坐标
-     * @param {number} y1 当前格子的 y 坐标
-     * @param {number} x2 候选方向的 x 坐标
-     * @param {number} y2 候选方向的 y 坐标
-     * @returns {object}  迷宫格子对象
+     * @param   {number} x1 前一个格子的 x 坐标
+     * @param   {number} y1 前一个格子的 y 坐标
+     * @param   {number} x2 当前格子的 x 坐标
+     * @param   {number} y2 当前格子的 y 坐标
+     * @returns {object}    迷宫格子对象
      * @memberof Maze
      */
-    getForwardGrid(x1, y1, x2, y2) {
+    getFrontGrid(x1, y1, x2, y2) {
         var x = 2 * x2 - x1,
             y = 2 * y2 - y1;
+        
+        // 判断该格子是否存在；
+        var isExist = !!this.mazeGrids[y] &&
+                      !!this.mazeGrids[y][x];
+
+        return isExist ? this.mazeGrids[y][x] : null;
+    }
+
+    /**
+     * 获取当前格子的左前方一个格子（相对）
+     *
+     * @param   {number} x1 前一个格子的 x 坐标
+     * @param   {number} y1 前一个格子的 y 坐标
+     * @param   {number} x2 当前格子的 x 坐标
+     * @param   {number} y2 当前格子的 y 坐标
+     * @returns {object}    迷宫格子对象
+     * @memberof Maze
+     */
+    getFrontLeftGrid(x1, y1, x2, y2) {
+        // 先获取前方格子
+        var x = 2 * x2 - x1,
+            y = 2 * y2 - y1;
+        
+        // 再判断左前方
+        if (x2 - x1 === 0) {
+            if (y2 - y1 > 0)
+                x += this.step;
+            else
+                x -= this.step; 
+        }
+        
+        if (y2 - y1 === 0) {
+            if (x2 - x1 > 0)
+                y -= this.step;
+            else
+                y += this.step;
+        }
+        
+        // 判断该格子是否存在；
+        var isExist = !!this.mazeGrids[y] &&
+                      !!this.mazeGrids[y][x];
+
+        return isExist ? this.mazeGrids[y][x] : null;
+    }
+
+    /**
+     * 获取当前格子的右前方一个格子（相对）
+     *
+     * @param   {number} x1 前一个格子的 x 坐标
+     * @param   {number} y1 前一个格子的 y 坐标
+     * @param   {number} x2 当前格子的 x 坐标
+     * @param   {number} y2 当前格子的 y 坐标
+     * @returns {object}    迷宫格子对象
+     * @memberof Maze
+     */
+    getFrontRightGrid(x1, y1, x2, y2) {
+        // 先获取前方格子
+        var x = 2 * x2 - x1,
+            y = 2 * y2 - y1;
+        
+        // 再判断右前方
+        if (x2 - x1 === 0) {
+            if (y2 - y1 > 0)
+                x -= this.step;
+            else
+                x += this.step; 
+        }
+        
+        if (y2 - y1 === 0) {
+            if (x2 - x1 > 0)
+                y += this.step;
+            else
+                y -= this.step;
+        }
         
         // 判断该格子是否存在；
         var isExist = !!this.mazeGrids[y] &&
@@ -234,20 +308,22 @@ class Maze {
                 isFrontPath;
 
             isExist = !!mazeGrids[_y] && !!mazeGrids[_y][_x];
-            isFrontExist = !!this.getForwardGrid(x, y, _x, _y);
+
+            isFrontExist = !!this.getFrontGrid(x, y, _x, _y);
             // 格子不存在直接排除
             if (!isExist || !isFrontExist)
                 return false;
                 /*
             isWall = _x === 0 || _x === this.w ||
                      _y === 0 || _y === this.h;*/
+
             isWall = mazeGrids[_y][_x].isWall;
+
             isPath = mazeGrids[_y][_x].isPath;
                           
-            isFrontPath = this.getForwardGrid(x, y, _x, _y).isPath;
+            isFrontPath = this.getFrontGrid(x, y, _x, _y).isPath;
 
-            isValidDirection = !isWall && !isPath &&
-                               !isFrontPath;
+            isValidDirection = !isWall && !isPath && !isFrontPath;
 
             return isValidDirection;
         });
@@ -265,6 +341,51 @@ class Maze {
         return directions;
     }
     
+    /**
+     * 判断第三个格子相对于第二个格子的方位
+     *
+     * @param   {object} grid1 格子对象
+     * @param   {object} grid2 格子对象
+     * @param   {object} grid2 格子对象
+     * @returns {string='front'|'left'|'right'} 方位 
+     * @memberof Maze
+     */
+    getDirection(grid1, grid2, grid3) {
+        var directions = ['front', 'left', 'right'];
+
+        var x1 = grid1.x, y1 = grid1.y,
+            x2 = grid2.x, y2 = grid2.y,
+            x3 = grid3.x, y3 = grid3.y;
+
+        var isFront, isLeft, isRight;
+        
+        isFront = (x3 - x2 === x2 - x1) ||
+                  (y3 - y2 === y2 - y1);
+                      
+        if (y2 === y1) {
+            if (x2 > x1) {
+                if (x3 === x2 && y3 < y2) isLeft  = true;
+                if (x3 === x2 && y3 > y2) isRight = true;
+            } else {
+                if (x3 === x2 && y3 > y2) isLeft  = true;
+                if (x3 === x2 && y3 < y2) isRight = true;
+            }
+        }
+
+        if (x2 === x1) {
+            if (y2 > y1) {
+                if (y3 === y2 && x3 > x2) isLeft  = true;
+                if (y3 === y2 && x3 < x2) isRight = true;
+            } else {
+                if (y3 === y2 && x3 < x2) isLeft  = true;
+                if (y3 === y2 && x3 > x2) isRight = true;
+            }
+        }
+
+        if (isFront) return directions[0];
+        if (isLeft)  return directions[1];
+        if (isRight) return directions[2];
+    }
 
     /**
      * 随机返回一个候选方向
@@ -282,13 +403,125 @@ class Maze {
         return directions[idx];
     }
     
-    // 遇到前方是围墙，或前方的前方是路，则分叉挖路
-    // 挖完第二格路时判断，判断逻辑放在 drawPath 中；
-    // 此时最多只存在左右两个候选路径；
-    // 所以直接挖所有候选路径，避免随机获取；
-    // 该函数获取分叉后的两个格子，
-    // 再分别传给 drawPath 当做第一格继续挖
-    forkPath() {}
+    /**
+     * 处理当前格子下一步路径分叉的问题
+     *
+     * @param   {object}   grid1      前一个格子对象
+     * @param   {object}   grid2      当前格子对象
+     * @param   {object[]} directions 候选方向的格子对象
+     * @returns {object[]}            返回确定要挖的格子对象
+     * @memberof Maze
+     */
+    forkPath(grid1, grid2, directions) {
+        // 判断是否需要路径分叉：（按顺序）
+        //   前方是围墙（分左、右）；
+        //   前方的前方是路（分左、右）；
+        //   左前方的左前方是路（分前、左）；
+        //   右前方的右前方是路（分前、右）；
+        //   左右前方的前方都是路（分前、左、右）；
+        // 前方是围墙、或前方的前方是路、或左右前方的前方都是路，
+        // 则所有候选方向都要挖；
+        // 左右前方的前方其中一个为路时，只能挖前方和左或右；
+        // 以上情况都不是，则使用随机选择；
+        
+        var isFrontWall,
+            isFrontPath;
+
+        // 标记每个候选方向的方位
+        var _directions = {
+            front: null,
+            left: null,
+            right: null
+        }
+
+        // 最后汇总返回的方向
+        var returnDirections = [];
+
+        // 遍历判断 directions 的方位
+        directions.forEach(grid => {
+            var direction = this.getDirection(grid1, grid2, grid);
+
+            _directions[direction] = grid;
+        })
+
+
+        // 现获取前面的格子
+        // 前面一定存在有效格子
+        // 不存在是路的情况
+        // 如果是围墙直接返回全部方向，不用继续判断
+        var frontGrid = this.getFrontGrid(grid1.x, grid1.y,
+                                          grid2.x, grid2.y);
+        isFrontWall = frontGrid.isWall;
+
+        if (isFrontWall) return directions;
+
+
+        // 获取前面的前面的格子
+        // 此时前面的前面也一定存在有效格子
+        // 不存在是围墙的情况
+        // 如果是路直接返回全部对象，不判断左右
+        var frontFrontGrid = this.getFrontGrid(grid2.x, grid2.y,
+                                  frontGrid.x, frontGrid.y);
+        isFrontPath = frontFrontGrid.isPath;
+
+        if (isFrontPath) return directions;
+
+   
+        // 此时前方的前方不是路，也不会是围墙，
+        // 只会是待挖的路，所以需要返回 front 方位的候选方向
+        returnDirections.push(_directions['front']);
+
+
+        // 获取左前方的左前方的格子
+        // 左前方一定存在有效格子
+        var frontLeftGrid = this.getFrontLeftGrid(grid1.x, grid1.y,
+                                                  grid2.x, grid2.y);
+        if (!frontLeftGrid.isWall) {
+            // 如果左前方是围墙，则跳过
+
+            // 否则继续判断左前方的左前方
+            // 此时左前方的左前方一定不会是围墙
+            var frontFrontLeftGrid = this.getFrontLeftGrid(grid2.x, grid2.y,
+                                          frontLeftGrid.x, frontLeftGrid.y);
+
+            // 如果是路，则需要返回 left 方位的候选方向（需要存在）
+            if (frontFrontLeftGrid.isPath && !!_directions['left'])
+                returnDirections.push(_directions['left']);
+                
+            // 如果不是，就要考虑随机选择 front, left
+        }
+
+
+        // 获取右前方的左前方的格子
+        // 右前方一定存在有效格子
+        var frontRightGrid = this.getFrontRightGrid(grid1.x, grid1.y,
+                                                    grid2.x, grid2.y);
+        if (!frontRightGrid.isWall) {
+            // 如果右前方也是墙（很难出现）则跳过
+
+            // 否则继续判断右前方的左前方
+            // 此时右前方的右前方一定不会是围墙
+            var frontFrontRightGrid = this.getFrontRightGrid(grid2.x, grid2.y,
+                                           frontRightGrid.x, frontRightGrid.y);
+
+            // 如果也是路，则需要返回 right 方位的候选方向（需要存在）
+            if (frontFrontRightGrid.isPath && !!_directions['right'])
+                returnDirections.push(_directions['right']);
+                
+            // 如果不是，就要考虑随机选择 front, right
+            // 如果 left 方位也要考虑随机，则随机选择 front, left, right
+        }
+
+
+        // todo：处理随机选择一个候选方向
+        // 使用随机的情况：
+        //   前方的前方不是路（可以挖）；
+        //   左右前方的前方只有一个是路时，随机选择前面和另一个不是路的方位；
+        //   左右前方的前方都不是路时，三个方位随机选一个；
+        // 此时
+
+        return _directions;
+    }
 
     /**
      * 绘画四周的围墙，以及出入口
@@ -318,13 +551,12 @@ class Maze {
      * 挖路实现函数，递归地绘制有效路径
      * 从 this.start 开始，到无路后结束
      *
-     * @param {object} grid    格子对象（要挖的路）；
+     * @param {object} grid    当前格子对象（要挖的路）；
      * @param {object} preGrid 前一个格子对象，
      *                         用于获取前进两格需要的方向；
      * @param {object} ctx     保存当前类的上下文，
      *                         方便递归时使用当前类的方法；
      * @memberof Maze
-     * @todo 一次前进两格
      */
     drawPath(grid, preGrid, ctx) {
         var x    = grid.x,
@@ -343,59 +575,46 @@ class Maze {
         mazeGrids[y][x].isPath = true;
         
         // 获取前面方向的格子
-        var fwdGrid = ctx.getForwardGrid(preX, preY, x, y);
+        var fwdGrid = ctx.getFrontGrid(preX, preY, x, y);
         var fwdX = fwdGrid.x,
             fwdY = fwdGrid.y;
             
         // 画同方向第二格路
         ctx.fillGrid(fwdX, fwdY, 'red')
-        
         mazeGrids[fwdY][fwdX].isPath = true;
             
+
         // 获取候选方向（第二格的）
         var directions = ctx.getValidDirections(fwdX, fwdY);
         
         // 递归挖路结束
         if (directions.length === 0) {
-            elConsole.innerHTML += 'done';
+            elConsole.innerText += 'done\n';
             return;
         }
         
-        // 判断是否需要路径分叉：
-        //   第二格前方是围墙；
-        //   第二格前方的前方是路；
-        var isNeedForkPath = false;
+ 
+        // 处理分叉情况，获取最终要挖的所有方向
+        directions = ctx.forkPath(grid, fwdGrid, directions);
         
-        var isWall = ctx.getForwardGrid(x, y, fwdX, fwdY).isWall;
-        
-        isNeedForkPath = isWall;
-        
-        if (isNeedForkPath) {
+
+        if (isNeedFork) {
             directions.forEach(item => {
-                setTimeout(ctx.drawPath, 2000, item, mazeGrids[fwdY][fwdX], ctx);
-            })
+                setTimeout(ctx.drawPath, 0, item,
+                           mazeGrids[fwdY][fwdX], ctx);
+            });
+
         } else {
         
-        // 从候选方向中获取随机方向
-        var randomDirection = ctx.getRandomDirection(directions);
-
-        if (randomDirection) {
+            // 从候选方向中获取随机方向
+            var randomDirection = ctx.getRandomDirection(directions);
 
             // 挖下一格路，传递的格子应为挖的第二格路
-            setTimeout(ctx.drawPath, 0, randomDirection, mazeGrids[fwdY][fwdX], ctx);
+            setTimeout(ctx.drawPath, 0, randomDirection,
+                       mazeGrids[fwdY][fwdX], ctx);
             //ctx.drawPath(randomDirection, mazeGrids[fwdY][fwdX], ctx);
-
-        } else {
-
-            // 无任何候选方向
-            elConsole.innerText = 'no direction.';
         }
-        
-        }
-        
-
     }
-
 }
 
 var cvs = document.querySelector('#maze');
