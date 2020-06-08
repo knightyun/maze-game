@@ -433,6 +433,10 @@ class Maze {
             left: null,
             right: null
         }
+        
+        // 处理随机获取候选方向的东西情况
+        var randomDirections = [],
+            flagRandom = false;
 
         // 最后汇总返回的方向
         var returnDirections = [];
@@ -469,26 +473,35 @@ class Maze {
    
         // 此时前方的前方不是路，也不会是围墙，
         // 只会是待挖的路，所以需要返回 front 方位的候选方向
+        // 并考虑获取随机方向的情况
         returnDirections.push(_directions['front']);
+        randomDirections.push(_directions['front']);
 
 
         // 获取左前方的左前方的格子
         // 左前方一定存在有效格子
         var frontLeftGrid = this.getFrontLeftGrid(grid1.x, grid1.y,
                                                   grid2.x, grid2.y);
-        if (!frontLeftGrid.isWall) {
-            // 如果左前方是围墙，则跳过
+        if (!frontLeftGrid.isWall && !!_directions['left']) {
+            // 如果左前方是围墙，或者左边没有候选方向，
+            // 则跳过；
 
             // 否则继续判断左前方的左前方
             // 此时左前方的左前方一定不会是围墙
             var frontFrontLeftGrid = this.getFrontLeftGrid(grid2.x, grid2.y,
                                           frontLeftGrid.x, frontLeftGrid.y);
 
-            // 如果是路，则需要返回 left 方位的候选方向（需要存在）
-            if (frontFrontLeftGrid.isPath && !!_directions['left'])
+            if (frontFrontLeftGrid.isPath) {
+            
+                // 如果是路，则需要返回 left 方位的候选方向
                 returnDirections.push(_directions['left']);
                 
-            // 如果不是，就要考虑随机选择 front, left
+            } else {
+                // 如果不是，就要考虑随机选择 front, left
+                randomDirections.push(_directions['left']);
+                flagRandom = true;
+            }
+                
         }
 
 
@@ -496,31 +509,39 @@ class Maze {
         // 右前方一定存在有效格子
         var frontRightGrid = this.getFrontRightGrid(grid1.x, grid1.y,
                                                     grid2.x, grid2.y);
-        if (!frontRightGrid.isWall) {
-            // 如果右前方也是墙（很难出现）则跳过
+        if (!frontRightGrid.isWall && !!_directions['right']) {
+            // 如果右前方也是墙（很难出现）且存在右侧候选方向，
+            // 则跳过
 
             // 否则继续判断右前方的左前方
             // 此时右前方的右前方一定不会是围墙
             var frontFrontRightGrid = this.getFrontRightGrid(grid2.x, grid2.y,
                                            frontRightGrid.x, frontRightGrid.y);
 
-            // 如果也是路，则需要返回 right 方位的候选方向（需要存在）
-            if (frontFrontRightGrid.isPath && !!_directions['right'])
+            if (frontFrontRightGrid.isPath) {
+            
+                // 如果也是路，则需要返回 right 方位的候选方向
                 returnDirections.push(_directions['right']);
-                
-            // 如果不是，就要考虑随机选择 front, right
-            // 如果 left 方位也要考虑随机，则随机选择 front, left, right
+                flagRandom = false;
+            } else {
+            
+                // 如果不是，就要考虑随机选择 front, right
+                // 如果 left 方位也要考虑随机，则随机选择 front, left, right
+                randomDirections.push(_directions['right']);
+                flagRandom = true;
+            }
+     
         }
 
-
-        // todo：处理随机选择一个候选方向
         // 使用随机的情况：
         //   前方的前方不是路（可以挖）；
         //   左右前方的前方只有一个是路时，随机选择前面和另一个不是路的方位；
         //   左右前方的前方都不是路时，三个方位随机选一个；
-        // 此时
-
-        return _directions;
+        // 否则返回全部方向
+        if (flagRandom)
+            return this.getRandomDirection(randomDirections);
+        else
+            return _directions;
     }
 
     /**
@@ -597,14 +618,11 @@ class Maze {
         // 处理分叉情况，获取最终要挖的所有方向
         directions = ctx.forkPath(grid, fwdGrid, directions);
         
-
-        if (isNeedFork) {
-            directions.forEach(item => {
-                setTimeout(ctx.drawPath, 0, item,
-                           mazeGrids[fwdY][fwdX], ctx);
-            });
-
-        } else {
+        directions.forEach(item => {
+            setTimeout(ctx.drawPath, 1000, item,
+                       mazeGrids[fwdY][fwdX], ctx);
+        });
+/*
         
             // 从候选方向中获取随机方向
             var randomDirection = ctx.getRandomDirection(directions);
@@ -613,11 +631,38 @@ class Maze {
             setTimeout(ctx.drawPath, 0, randomDirection,
                        mazeGrids[fwdY][fwdX], ctx);
             //ctx.drawPath(randomDirection, mazeGrids[fwdY][fwdX], ctx);
-        }
+        }*/
     }
 }
 
 var cvs = document.querySelector('#maze');
 var elConsole = document.querySelector('.console');
 
-var maze = new Maze(cvs, 210, 210, 10);
+//var maze = new Maze(cvs, 210, 210, 10);
+
+var elBall = document.querySelector('.ball');
+window.addEventListener('devicemotion', moveHandler);
+
+var ballX = 0,
+    ballY = 0;
+
+function moveHandler(evt) {
+    var acc = evt.accelerationIncludingGravity;
+    // 右翻 x 为负，后翻 y 为正
+    // 最大都为 10
+    var ax = -acc.x,
+        ay = acc.y;
+    
+    ballX += (ax / 2);
+    ballY += (ay / 2);
+    
+    if (ballX < 0)   ballX = 0;
+    if (ballX > 190) ballX = 190;
+    if (ballY < 0)   ballY = 0;
+    if (ballY > 190) ballY = 190;
+    
+    elConsole.innerText = ballX + '\n' + ballY;
+    
+    elBall.style.left = ballX + 'px';
+    elBall.style.top  = ballY + 'px';
+}

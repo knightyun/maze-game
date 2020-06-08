@@ -10,7 +10,25 @@
             border: 1px solid aqua;
             background: #eee;
         }
+        .bg {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            background: teal;
+        }
+        .ball {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: red;
+        }
     </style>
+    <script src="https://cdn.bootcss.com/vConsole/3.3.4/vconsole.min.js"></script>
+    <script>
+        if (navigator.userAgent.match(/Android/))
+        var vConsole = new VConsole();
+    </script>
     <script src="maze.js" defer></script>
 </head>
 
@@ -18,6 +36,10 @@
     <canvas id="maze"></canvas>
     
     <p class="console"></p>
+    
+    <div class="bg">
+        <div class="ball"></div>
+    </div>
 </body>
 
 </html>
