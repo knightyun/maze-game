@@ -700,9 +700,9 @@ class Maze {
         if (this.ballX <= 0) this.ballX = 0;
         if (this.ballY <= 0) this.ballY = 0;
         
-        if (this.ballX >= this.w * this.step)
+        if (this.ballX >= this.w * this.step - this.ballDia)
             this.ballX = this.w * this.step - this.ballDia;
-        if (this.ballY >= this.h * this.step)
+        if (this.ballY >= this.h * this.step - this.ballDia)
             this.ballY = this.h * this.step - this.ballDia;
         
         elBall.style.left = this.ballX + 'px';
@@ -754,7 +754,7 @@ function keyDownHandler(evt) {
     // ArrowUp ArrowLeft ArrowDown ArrowRight
 
     // 每个坐标的单步移动值
-    var step = 10;
+    var step = 1.11;
 
     switch (evt.key) {
         case 'w':
