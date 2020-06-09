@@ -669,14 +669,15 @@ class Maze {
     drawBall(elBall, d, ballColor) {
         
         // 初始化小球坐标
-        this.ballX = this.entrance.x * this.step;
-        this.ballY = this.entrance.y * this.step;
+        this.ballX   = this.entrance.x * this.step;
+        this.ballY   = this.entrance.y * this.step;
+        this.ballDia = d;
 
         // 初始化位置、大小、颜色
-        elBall.style.width      = d          + 'px';
-        elBall.style.height     = d          + 'px';
-        elBall.style.left       = this.ballX + 'px';
-        elBall.style.top        = this.ballY + 'px';
+        elBall.style.width      = this.ballDia + 'px';
+        elBall.style.height     = this.ballDia + 'px';
+        elBall.style.left       = this.ballX   + 'px';
+        elBall.style.top        = this.ballY   + 'px';
         elBall.style.background = ballColor;
         
     }
@@ -691,18 +692,18 @@ class Maze {
     moveBall(x, y) {
         var elBall = this.elBall;
         
-        // 限制小球在迷宫范围内
-        if (this.ballX < 0) this.ballX = 0;
-        if (this.ballY < 0) this.ballY = 0;
-        
-        if (this.ballX > this.w * this.step)
-            this.ballX = this.w * this.step;
-        if (this.ballY > this.h * this.step)
-            this.ballY = this.h * this.step;
-        
         // 移动小球
         this.ballX += x;
         this.ballY += y;
+        
+        // 限制小球在迷宫范围内
+        if (this.ballX <= 0) this.ballX = 0;
+        if (this.ballY <= 0) this.ballY = 0;
+        
+        if (this.ballX >= this.w * this.step)
+            this.ballX = this.w * this.step - this.ballDia;
+        if (this.ballY >= this.h * this.step)
+            this.ballY = this.h * this.step - this.ballDia;
         
         elBall.style.left = this.ballX + 'px';
         elBall.style.top  = this.ballY + 'px';
@@ -739,7 +740,9 @@ var keyHandler    = keyDownHandler,
 elStartGame.setAttribute('onclick',
     `maze.startMove(keyHandler, motionHandler)`);
 
+console.log(typeof DeviceMotionEvent);
 
+maze.startMove(keyHandler, motionHandler);
 /**
  * 处理键盘移动事件的回调函数
  *
@@ -790,7 +793,7 @@ function deviceMotionHandler(evt) {
     // 右翻 x 为负，后翻 y 为正
     // 最大都为 10
     var ax = -acc.x,
-        ay = acc.y; console.log(0);
+        ay = acc.y;
     
     maze.moveBall(ax, ay);
 }
