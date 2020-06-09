@@ -7,8 +7,11 @@
     <title>Maze</title>
     <style>
         #maze {
-            border: 1px solid aqua;
-            background: #eee;
+            position: absolute;
+            left: 1em;
+            top: 1em;
+            outline: 1px solid aqua;
+            background: black;
         }
         .bg {
             position: relative;
@@ -23,6 +26,13 @@
             border-radius: 50%;
             background: red;
         }
+
+        #ball {
+            position: absolute;
+            left: 1em;
+            top: 1em;
+            border: 1px solid blue;
+        }
     </style>
     <script src="https://cdn.bootcss.com/vConsole/3.3.4/vconsole.min.js"></script>
     <script>
@@ -35,11 +45,7 @@
 <body>
     <canvas id="maze"></canvas>
     
-    <p class="console"></p>
-    
-    <div class="bg">
-        <div class="ball"></div>
-    </div>
+    <canvas id="ball" width="400" height="400"></canvas>
 </body>
 
 </html>
