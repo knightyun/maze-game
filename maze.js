@@ -739,11 +739,7 @@ var keyHandler    = keyDownHandler,
 elStartGame.setAttribute('onclick',
     `maze.startMove(keyHandler, motionHandler)`);
 
-window.addEventListener('devicemotion', evt => {
-    var acc = evt.accelerationIncludingGravity;
 
-    console.log(acc.x, acc.y);
-})
 /**
  * 处理键盘移动事件的回调函数
  *
