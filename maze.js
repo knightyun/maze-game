@@ -691,7 +691,17 @@ class Maze {
      */
     moveBall(x, y) {
         var elBall = this.elBall;
-        
+        var bx, by;
+
+        // 根据小球直径选择用于判断的定位点
+        //
+        // x < 0: bX = ballX
+        // y < 0: bY = ballY
+        // x > 0: bX = ballX + ballDia
+        // y > 0: bY = ballY + ballDia
+
+        // if (x < 0) 
+
         // 移动小球
         this.ballX += x;
         this.ballY += y;
@@ -702,9 +712,14 @@ class Maze {
         
         if (this.ballX >= this.w * this.step - this.ballDia)
             this.ballX = this.w * this.step - this.ballDia;
+
         if (this.ballY >= this.h * this.step - this.ballDia)
             this.ballY = this.h * this.step - this.ballDia;
         
+        // 限制小球在迷宫路径内
+        // isPath = false 则限制
+        // 小球只要有一部分覆盖到墙，则限制
+
         elBall.style.left = this.ballX + 'px';
         elBall.style.top  = this.ballY + 'px';
     }
