@@ -7,8 +7,8 @@
         初始全为墙，依次在其中挖路（寻路）；
         包括出入口，和四周的围墙，不在寻路范围内；
         单元格边长（正方形）：step
-        迷宫总长度：w，总格数：w / step；
-        迷宫总高度：h，总格数：h / step；
+        迷宫总长度总格数：w；
+        迷宫总高度总格数：h；
 
     寻路：
         寻路时只能以两格为单位前进；
@@ -52,16 +52,18 @@ class Maze {
     /**
      * @constructor
      * @param {Element} elMaze 承载迷宫的 canvas 元素
-     * @param {number}  w      迷宫宽度
-     * @param {number}  h      迷宫高度
+     * @param {Element} elBall 绘制小球元素
+     * @param {number}  w      迷宫宽度（格数）
+     * @param {number}  h      迷宫高度（格数）
      * @param {*}       step   单元格大小
      * @memberof Maze
      */
-    constructor(elMaze, w, h, step) {
-        this.w = w;
-        this.h = h;
-        this.step = step;
+    constructor(elMaze, elBall, w, h, step) {
+        this.w      = w;
+        this.h      = h;
+        this.step   = step;
         this.elMaze = elMaze;
+        this.elBall = elBall;
         this.cvsCtx = this.elMaze.getContext('2d');
 
         // 包含所有格子的二维数组
@@ -75,8 +77,8 @@ class Maze {
 
         // 出口位置
         this.exit = {
-            x: w / step - 2,
-            y: h / step - 1
+            x: w  - 2,
+            y: h  - 1
         }
 
         this.init();
@@ -93,20 +95,21 @@ class Maze {
             h         = this.h,
             step      = this.step,
             elMaze    = this.elMaze,
+            elBall    = this.elBall,
             entrance  = this.entrance,
             exit      = this.exit;
 
         // 调整 canvas 元素尺寸
-        elMaze.width  = w;
-        elMaze.height = h;
+        elMaze.width  = w * step;
+        elMaze.height = h * step;
 
         // 绘画初始迷宫，包括围墙，出入口，
         // 并初始化每个单元格的信息
-        for (var y = 0; y < h / step; y++) {
+        for (var y = 0; y < h; y++) {
             
             mazeGrids[y] = [];
 
-            for (var x = 0; x < w / step; x++) {
+            for (var x = 0; x < w; x++) {
 
                 // 每个单元格的信息，包括坐标，是否为墙，是否为路
                 mazeGrids[y][x] = {
@@ -115,8 +118,8 @@ class Maze {
                     y: y,
                     // 判断是否是围墙
                     isWall: (x === 0 || y === 0 ||
-                             x === w / step - 1 ||
-                             y === h / step - 1),
+                             x === w - 1 ||
+                             y === h - 1),
                     // 是否为入口
                     isEntrance: x === entrance.x &&
                                 y === entrance.y,
@@ -133,7 +136,10 @@ class Maze {
         this.drawWall('black', 'white');
 
         // 挖路
-        this.drawPath(entrance, {x:1, y:-1}, 'white');
+        this.drawPath(entrance, { x: 1, y: -1 }, 'white');
+
+        // 画小球
+        this.drawBall(elBall, 10, 'red');
     }
 
     /**
@@ -651,60 +657,144 @@ class Maze {
                          pathColor, ctx);
         }
     }
+
+    /**
+     * 画出走迷宫的小球
+     *
+     * @param {Element} elBall    用于绘制小球的元素
+     * @param {number}  d         小球的直径
+     * @param {string}  ballColor 小球的颜色
+     * @memberof Maze
+     */
+    drawBall(elBall, d, ballColor) {
+        
+        // 初始化小球坐标
+        this.ballX = this.entrance.x * this.step;
+        this.ballY = this.entrance.y * this.step;
+
+        // 初始化位置、大小、颜色
+        elBall.style.width      = d          + 'px';
+        elBall.style.height     = d          + 'px';
+        elBall.style.left       = this.ballX + 'px';
+        elBall.style.top        = this.ballY + 'px';
+        elBall.style.background = ballColor;
+        
+    }
+
+    /**
+     * 实现移动控制小球
+     *
+     * @param {number} x 单次在 x 轴上移动的值
+     * @param {number} y 单次在 y 轴上移动的值
+     * @memberof Maze
+     */
+    moveBall(x, y) {
+        var elBall = this.elBall;
+        
+        // 限制小球在迷宫范围内
+        if (this.ballX < 0) this.ballX = 0;
+        if (this.ballY < 0) this.ballY = 0;
+        
+        if (this.ballX > this.w * this.step)
+            this.ballX = this.w * this.step;
+        if (this.ballY > this.h * this.step)
+            this.ballY = this.h * this.step;
+        
+        // 移动小球
+        this.ballX += x;
+        this.ballY += y;
+        
+        elBall.style.left = this.ballX + 'px';
+        elBall.style.top  = this.ballY + 'px';
+    }
+
+    /**
+     * 开始移动，添加事件监听
+     *
+     * @param {function} handler 事件的回调函数
+     * @memberof Maze
+     */
+    startMove(keyHandler, motionHandler) {
+        // 监控键盘事件
+        window.addEventListener('keydown', keyHandler);
+
+        // 监控移动端重力感应器事件
+        window.addEventListener('devicemotion', motionHandler);
+
+        console.log('game started.')
+    }
 }
 
-var cvsMaze = document.querySelector('#maze');
+var elMaze = document.querySelector('#maze-grid');
+var elBall = document.querySelector('#ball');
+var elStartGame = document.querySelector('#start-game');
 
-var maze = new Maze(cvsMaze, 310, 310, 10);
+var maze = new Maze(elMaze, elBall, 21, 21, 20);
 
 console.log('end');
 
-class Ball {
-    constructor(elBall, diameter, color) {
-        this.elBall   = elBall;
-        this.diameter = diameter;
-        this.color    = color;
-        this.ctx = this.elBall.getContext('2d');
+var keyHandler    = keyDownHandler,
+    motionHandler = deviceMotionHandler;
 
-        this.drawBall(10, 10, diameter, color);
-    }
+elStartGame.setAttribute('onclick',
+    `maze.startMove(keyHandler, motionHandler)`);
 
-    drawBall(x, y, diameter, color) {
-        var ctx = this.ctx;
+window.addEventListener('devicemotion', evt => {
+    var acc = evt.accelerationIncludingGravity;
 
-        ctx.arc(x, y, diameter, 0, 2*Math.PI);
-        ctx.fillStyle = color;
-        ctx.fill();
+    console.log(acc.x, acc.y);
+})
+/**
+ * 处理键盘移动事件的回调函数
+ *
+ * @param {Event} evt 传入的事件对象
+ */
+function keyDownHandler(evt) {
+    // 上      左        下        右
+    // w       a         s         d
+    // ArrowUp ArrowLeft ArrowDown ArrowRight
 
-        ctx.translate(30, 30);
+    // 每个坐标的单步移动值
+    var step = 10;
+
+    switch (evt.key) {
+        case 'w':
+        case 'ArrowUp':
+            maze.moveBall(0, -step);
+            break;
+            
+        case 'a':
+        case 'ArrowLeft':
+            maze.moveBall(-step, 0);
+            break;
+
+        case 's':
+        case 'ArrowDown':
+            maze.moveBall(0, step);
+            break;
+
+        case 'd':
+        case 'ArrowRight':
+            maze.moveBall(step, 0);
+            break;
+
+        default:
+            break;
     }
 }
 
-var cvsBall = document.querySelector('#ball');
-
-new Ball(cvsBall, 5, 'red');
-
-var ballX = 0,
-    ballY = 0;
-
-
-// window.addEventListener('devicemotion', moveHandler);
-
-function moveHandler(evt) {
+/**
+ * 处理移动端重力感应移动事件的回调
+ *
+ * @param {Event} evt 传入的事件对象
+ */
+function deviceMotionHandler(evt) {
     var acc = evt.accelerationIncludingGravity;
+
     // 右翻 x 为负，后翻 y 为正
     // 最大都为 10
     var ax = -acc.x,
-        ay = acc.y;
+        ay = acc.y; console.log(0);
     
-    ballX += (ax / 2);
-    ballY += (ay / 2);
-    
-    if (ballX < 0)   ballX = 0;
-    if (ballX > 190) ballX = 190;
-    if (ballY < 0)   ballY = 0;
-    if (ballY > 190) ballY = 190;
-    
-    cvsBall.style.left = ballX + 'px';
-    cvsBall.style.top  = ballY + 'px';
+    maze.moveBall(ax, ay);
 }

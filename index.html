@@ -7,31 +7,20 @@
     <title>Maze</title>
     <style>
         #maze {
+            position: relative;
+            margin-top: 2em;
+            margin-left: 50%;
+            transform: translateX(-50%);
+        }
+        #maze-grid {
             position: absolute;
-            left: 1em;
-            top: 1em;
-            outline: 1px solid aqua;
+            left: 0;
+            top: 0;
             background: black;
         }
-        .bg {
-            position: relative;
-            width: 200px;
-            height: 200px;
-            background: teal;
-        }
-        .ball {
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: red;
-        }
-
         #ball {
             position: absolute;
-            left: 1em;
-            top: 1em;
-            border: 1px solid blue;
+            border-radius: 50%;
         }
     </style>
     <script src="https://cdn.bootcss.com/vConsole/3.3.4/vconsole.min.js"></script>
@@ -43,9 +32,13 @@
 </head>
 
 <body>
-    <canvas id="maze"></canvas>
-    
-    <canvas id="ball" width="400" height="400"></canvas>
+    <div class="container">
+        <div id="maze">
+            <canvas id="maze-grid"></canvas>
+            <div id="ball"></div>
+        </div>
+        <button id="start-game">开始游戏</button>
+    </div>
 </body>
 
 </html>
