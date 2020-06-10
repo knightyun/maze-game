@@ -694,15 +694,6 @@ class Maze {
         var bx     = this.ballX,
             by     = this.ballY;
 
-        // 根据小球直径选择用于判断的定位点
-        //
-        // x < 0: bX = ballX
-        // y < 0: bY = ballY
-        // x > 0: bX = ballX + ballDia
-        // y > 0: bY = ballY + ballDia
-
-        // if (x < 0) 
-
         // 移动后的坐标
         bx += x;
         by += y;
@@ -716,8 +707,18 @@ class Maze {
         elBall.style.top  = this.ballY + 'px';
     }
     
-    // 限制小球移动范围，返回限制后的有效坐标
+    // 
     // 输入小球变换后的坐标（左上角），变化的值
+    /**
+     * 限制小球移动范围，返回限制后的有效坐标
+     *
+     * @param   {number} x   变换后的小球 x 坐标
+     * @param   {number} y   变换后的小球 y 坐标
+     * @param   {number} cx  x 坐标的变换值
+     * @param   {number} cy  y 坐标的变换值
+     * @returns {object}     限制后的 x，y 坐标
+     * @memberof Maze
+     */
     getBallValidPosition(x, y, cx, cy) {
         
         // 限制小球在迷宫范围内
@@ -729,23 +730,19 @@ class Maze {
 
         if (y >= this.h * this.step - this.ballDia)
             y  = this.h * this.step - this.ballDia;
-        
-        // 限制小球在迷宫路径内$  
-        // isPath = false 则限制
-        // 小球四个角有一个在墙内，则限制
-        
+         
         // 小球四个角的坐标转换为迷宫坐标，
         // 即除以单元格长度后去掉小数部分
         // 刚好接触墙判断为路
         var leftTop = {
-            x: ~~(x / this.step),
-            y: ~~(y / this.step)
+            x: ~~( x / this.step),
+            y: ~~( y / this.step)
         }, leftBottom = {
-            x: ~~(x / this.step),
+            x: ~~( x / this.step),
             y: ~~((y + this.ballDia) / this.step)
         }, rightTop = {
             x: ~~((x + this.ballDia) / this.step),
-            y: ~~(y / this.step)
+            y: ~~( y / this.step)
         }, rightBottom = {
             x: ~~((x + this.ballDia) / this.step),
             y: ~~((y + this.ballDia) / this.step)
@@ -754,70 +751,87 @@ class Maze {
         // 判断每个角对应的迷宫格子是否是路
         // 格子不存在就视作墙
         var that = this;
-        
+  
         function isGridPath(grid) {
             var x = grid.x,
                 y = grid.y;
                 
-            var isPath = that.mazeGrids[y] &&
+            var isPath = that.mazeGrids[y]    &&
                          that.mazeGrids[y][x] &&
                          that.mazeGrids[y][x].isPath;
                 
             return isPath;
         }
-        
-        // 如果不是路，则去除超出的部分
-        // 两坐标轴方向分开判断，互不影响
-        // 穿墙的情况：
-        //   一个角，只处理一个坐标
-        //   两个角，一定同侧，只需改变一个坐标；
-        //   三个角，两个同侧，改变两个坐标；
-        // 右、下方需要算上球直径，左、上方不需要
-        /*
-        if (!isGridPath(leftTop, this)) {
-            x = leftTop.x + this.step;
-            y = leftTop.y + this.step;
+
+        // 小球穿墙的情况：
+        //   1. 只有一个角穿墙，需要考虑移动方向；
+        //   2. 只有两个角穿墙，一定在同一侧；
+        //   3. 三个角同时穿墙（暂时不考虑）；
+
+        // 1. 一个角穿墙，向坐标值更大的一个轴方向移动
+        // 1.1. 左上角
+        if (!isGridPath(leftTop) && isGridPath(leftBottom) &&
+            isGridPath(rightTop) && isGridPath(rightBottom)) {
+            
+            // 向左穿墙
+            if (x - leftTop.x * this.step >
+                y - leftTop.y * this.step)
+                x = (leftTop.x + 1) * this.step;
+            // 向上穿墙
+            else
+                y = (leftTop.y + 1) * this.step;
         }
-        if (!isGridPath(leftBottom, this)) {
-            x = leftBottom.x + this.step;
+        // 1.2. 左下角
+        if (!isGridPath(leftBottom) && isGridPath(leftTop) &&
+            isGridPath(rightBottom) && isGridPath(rightTop)) {
+            
+            // 向左穿墙
+            if (x - leftBottom.x * this.step >
+                y - leftBottom.y * this.step)
+                x = (leftBottom.x + 1) * this.step;
+            // 向下穿墙
+            else
+                y = leftBottom.y - this.ballDia;
         }
-        if (!isGridPath(rightTop, this)) {
-            y = leftBottom.y + this.step;
+        // 1.3. 右下角
+        if (!isGridPath(rightBottom) && isGridPath(rightTop) &&
+            isGridPath(leftBottom)   && isGridPath(leftTop)) {
+            
+            // 向右穿墙
+            if (y - rightBottom.y * this.step >
+                x - rightBottom.x * this.step)
+                x = rightBottom.x * this.step - this.ballDia;
+            // 向下穿墙
+            else
+                y = rightBottom.y * this.step - this.ballDia;
         }
-        if (!isGridPath(rightBottom, this)) {
-            ;
+        // 1.4. 右上角
+        if (!isGridPath(rightTop) && isGridPath(rightBottom) &&
+            isGridPath(leftTop)   && isGridPath(leftBottom)) {
+            
+            // 向右穿墙
+            if (y - rightTop.y * this.step >
+                x - rightTop.x * this.step)
+                x = rightTop.x * this.step - this.ballDia;
+            // 向上穿墙
+            else
+                y = (rightTop.y + 1) * this.step;
         }
-        */
-        
-        // cx < 0，左侧穿墙（一个角以上），x 加上 step；
-        // cx > 0，右侧穿墙，x 减去 ballDia；
-        // cy < 0，上侧穿墙，y 加上 step；
-        // cy > 0，下侧穿墙，y 减去 ballDia；
-        /*
-        if (cx < 0 && !isGridPath(leftTop) ||
-        !isGridPath(leftBottom))
+
+        // 2. 同侧两个角穿墙
+        // 2.1. 左侧
+        if (!isGridPath(leftTop)    && !isGridPath(leftBottom))
             x = (leftTop.x + 1) * this.step;
-            
-        if (cx > 0 && !isGridPath(rightTop) ||
-        !isGridPath(rightBottom))
-            x = rightTop.x * this.step - this.ballDia;
-            
-        if (cy < 0 && !isGridPath(leftTop) ||
-        !isGridPath(rightTop))
+        // 2.2. 下侧
+        if (!isGridPath(leftBottom) && !isGridPath(rightBottom))
+            y = leftBottom.y    * this.step - this.ballDia;
+        // 2.3. 右侧
+        if (!isGridPath(rightTop)   && !isGridPath(rightBottom))
+            x = rightTop.x      * this.step - this.ballDia;
+        // 2.4. 上侧
+        if (!isGridPath(leftTop)    && !isGridPath(rightTop))
             y = (leftTop.y + 1) * this.step;
-        
-        if (cy > 0 && !isGridPath(leftBottom) ||
-        !isGridPath(rightBottom))
-            y = leftBottom.y * this.step - this.ballDia;
-        */
-        
-        if (!isGridPath(leftTop) ||
-            !isGridPath(leftBottom) ||
-            !isGridPath(rightTop) ||
-            !isGridPath(rightBottom))
-            x -= (cx + 1), y -= (cy + 1);
-            
-               
+
         return {x, y}
     }
 
@@ -844,8 +858,6 @@ var elStartGame = document.querySelector('#start-game');
 
 var maze = new Maze(elMaze, elBall, 21, 21, 20);
 
-console.log('end');
-
 var keyHandler    = keyDownHandler,
     motionHandler = deviceMotionHandler;
 
@@ -854,7 +866,8 @@ elStartGame.setAttribute('onclick',
 
 console.log(typeof DeviceMotionEvent);
 
-//maze.startMove(keyHandler, motionHandler);
+maze.startMove(keyHandler, motionHandler);
+
 /**
  * 处理键盘移动事件的回调函数
  *
@@ -866,7 +879,7 @@ function keyDownHandler(evt) {
     // ArrowUp ArrowLeft ArrowDown ArrowRight
 
     // 每个坐标的单步移动值
-    var step = 1.11;
+    var step = 3;
 
     switch (evt.key) {
         case 'w':
