@@ -51,20 +51,26 @@
 class Maze {
     /**
      * @constructor
-     * @param {Element} elMaze 承载迷宫的 canvas 元素
-     * @param {Element} elBall 绘制小球元素
-     * @param {number}  w      迷宫宽度（格数）
-     * @param {number}  h      迷宫高度（格数）
-     * @param {*}       step   单元格大小
+     * @param {Element} elMaze  承载迷宫的 canvas 元素
+     * @param {Element} elBall  绘制小球的元素
+     * @param {number}  ballDia 小球的直径（像素）
+     * @param {number}  w       迷宫宽度（格数）
+     * @param {number}  h       迷宫高度（格数）
+     * @param {*}       step    单元格大小
      * @memberof Maze
      */
-    constructor(elMaze, elBall, w, h, step) {
-        this.w      = w;
-        this.h      = h;
-        this.step   = step;
-        this.elMaze = elMaze;
-        this.elBall = elBall;
-        this.cvsCtx = this.elMaze.getContext('2d');
+    constructor(elMaze, elBall, ballDia, w, h, step) {
+        this.w          = w;
+        this.h          = h;
+        this.step       = step;
+        this.elMaze     = elMaze;
+        this.elBall     = elBall;
+        this.ballDia    = ballDia;
+        this.ballSpeedX = 0;     // 小球 x 轴方向的移动速度；
+        this.ballSpeedY = 0;     // 小球 y 轴方向的移动速度；
+        this.G          = 9.8;   // 重力加速度
+        this.time       = null;  // 时间戳，用于设置重力加速度
+        this.cvsCtx     = this.elMaze.getContext('2d');
 
         // 包含所有格子的二维数组
         this.mazeGrids = [];
@@ -81,7 +87,7 @@ class Maze {
             y: h  - 1
         }
 
-        this.init();
+        this.initMaze();
     }
 
     /**
@@ -89,13 +95,14 @@ class Maze {
      *
      * @memberof Maze
      */
-    init() {
+    initMaze() {
         var mazeGrids = this.mazeGrids,
             w         = this.w,
             h         = this.h,
             step      = this.step,
             elMaze    = this.elMaze,
             elBall    = this.elBall,
+            ballDia   = this.ballDia,
             entrance  = this.entrance,
             exit      = this.exit;
 
@@ -139,7 +146,7 @@ class Maze {
         this.drawPath(entrance, { x: 1, y: -1 }, 'white');
 
         // 画小球
-        this.drawBall(elBall, 10, 'red');
+        this.drawBall(elBall, ballDia, 'red');
     }
 
     /**
@@ -671,13 +678,12 @@ class Maze {
         // 初始化小球坐标
         this.ballX   = this.entrance.x * this.step;
         this.ballY   = this.entrance.y * this.step;
-        this.ballDia = d;
 
         // 初始化位置、大小、颜色
-        elBall.style.width      = this.ballDia + 'px';
-        elBall.style.height     = this.ballDia + 'px';
-        elBall.style.left       = this.ballX   + 'px';
-        elBall.style.top        = this.ballY   + 'px';
+        elBall.style.width      = d          + 'px';
+        elBall.style.height     = d          + 'px';
+        elBall.style.left       = this.ballX + 'px';
+        elBall.style.top        = this.ballY + 'px';
         elBall.style.background = ballColor;
         
     }
@@ -691,14 +697,55 @@ class Maze {
      */
     moveBall(x, y) {
         var elBall = this.elBall;
+        
+        // 未移动时的坐标
         var bx     = this.ballX,
             by     = this.ballY;
 
+        // 无加速度版本：
         // 移动后的坐标
-        bx += x;
-        by += y;
-        
-        var validPos = this.getBallValidPosition(bx, by, x, y);
+        // bx += x;
+        // by += y;
+
+            // 重力加速度版本：
+            // 每秒（近似为每次调用）速度增加量等于重力加速度
+            // 加速度的大小与倾斜角度（近似为 x，y 的值）成正比
+            // 时间戳单位为 1/1000 秒，
+            // 重力加速度则为 G / 1000
+
+            // 不同轴方向计算后的重力加速度
+            var gX = (this.G / 1000) * (x / 10),
+                gY = (this.G / 1000) * (y / 10);
+
+                
+            // 每次调用根据时间戳确定要移动的距离
+            if (!this.time) {
+                this.time = Date.now();
+            } else {
+
+                // 根据重力加速度增加速度
+                // 如果该方向没有移动，则速度置为 0
+                if (!x)
+                    this.ballSpeedX = 0;
+                else
+                    this.ballSpeedX += (Date.now() - this.time) * gX;
+                
+                if (!y)
+                    this.ballSpeedY = 0;
+                else
+                    this.ballSpeedY += (Date.now() - this.time) * gY;
+
+            }
+
+            this.time = Date.now();
+
+            bx += this.ballSpeedX,
+            by += this.ballSpeedY;
+
+            console.log(gX, gY, this.ballSpeedX, this.ballSpeedY);
+            
+        // 把小球变换后的坐标限制在路内（防止穿墙）
+        var validPos = this.getBallValidPosition(bx, by);
         
         this.ballX = validPos.x;
         this.ballY = validPos.y;
@@ -707,26 +754,22 @@ class Maze {
         elBall.style.top  = this.ballY + 'px';
     }
     
-    // 
-    // 输入小球变换后的坐标（左上角），变化的值
     /**
      * 限制小球移动范围，返回限制后的有效坐标
      *
      * @param   {number} x   变换后的小球 x 坐标
      * @param   {number} y   变换后的小球 y 坐标
-     * @param   {number} cx  x 坐标的变换值
-     * @param   {number} cy  y 坐标的变换值
      * @returns {object}     限制后的 x，y 坐标
      * @memberof Maze
      */
-    getBallValidPosition(x, y, cx, cy) {
+    getBallValidPosition(x, y) {
         
         // 限制小球在迷宫范围内
-        if (x <= 0) x = 0;
+        if (x <= 0) x = 0, this.ballSpeedX = 0;
         if (y <= 0) y = 0;
         
         if (x >= this.w * this.step - this.ballDia)
-            x  = this.w * this.step - this.ballDia;
+            x  = this.w * this.step - this.ballDia, this.ballSpeedX = 0;
 
         if (y >= this.h * this.step - this.ballDia)
             y  = this.h * this.step - this.ballDia;
@@ -776,61 +819,61 @@ class Maze {
             // 向左穿墙
             if (x - leftTop.x * this.step >
                 y - leftTop.y * this.step)
-                x = (leftTop.x + 1) * this.step;
+                x = (leftTop.x + 1) * this.step, this.ballSpeedX = 0;
             // 向上穿墙
             else
-                y = (leftTop.y + 1) * this.step;
+                y = (leftTop.y + 1) * this.step, this.ballSpeedY = 0;
         }
         // 1.2. 左下角
         if (!isGridPath(leftBottom) && isGridPath(leftTop) &&
             isGridPath(rightBottom) && isGridPath(rightTop)) {
             
             // 向左穿墙
-            if (x - leftBottom.x * this.step >
-                y - leftBottom.y * this.step)
-                x = (leftBottom.x + 1) * this.step;
+            if ((leftBottom.x + 1) * this.step - x <
+                y + this.ballDia - leftBottom.y * this.step)
+                x = (leftBottom.x + 1) * this.step, this.ballSpeedX = 0;
             // 向下穿墙
             else
-                y = leftBottom.y - this.ballDia;
+                y = leftBottom.y * this.step - this.ballDia, this.ballSpeedY = 0;
         }
         // 1.3. 右下角
         if (!isGridPath(rightBottom) && isGridPath(rightTop) &&
             isGridPath(leftBottom)   && isGridPath(leftTop)) {
             
             // 向右穿墙
-            if (y - rightBottom.y * this.step >
-                x - rightBottom.x * this.step)
-                x = rightBottom.x * this.step - this.ballDia;
+            if (y + this.ballDia - rightBottom.y * this.step >
+                x + this.ballDia - rightBottom.x * this.step)
+                x = rightBottom.x * this.step - this.ballDia, this.ballSpeedX = 0;
             // 向下穿墙
             else
-                y = rightBottom.y * this.step - this.ballDia;
+                y = rightBottom.y * this.step - this.ballDia, this.ballSpeedY = 0;
         }
         // 1.4. 右上角
         if (!isGridPath(rightTop) && isGridPath(rightBottom) &&
             isGridPath(leftTop)   && isGridPath(leftBottom)) {
             
             // 向右穿墙
-            if (y - rightTop.y * this.step >
-                x - rightTop.x * this.step)
-                x = rightTop.x * this.step - this.ballDia;
+            if ((rightTop.y + 1) * this.step - y >
+                x + this.ballDia - rightTop.x * this.step)
+                x = rightTop.x * this.step - this.ballDia, this.ballSpeedX = 0;
             // 向上穿墙
             else
-                y = (rightTop.y + 1) * this.step;
+                y = (rightTop.y + 1) * this.step, this.ballSpeedY = 0;
         }
 
         // 2. 同侧两个角穿墙
         // 2.1. 左侧
         if (!isGridPath(leftTop)    && !isGridPath(leftBottom))
-            x = (leftTop.x + 1) * this.step;
+            x = (leftTop.x + 1) * this.step, this.ballSpeedX = 0;
         // 2.2. 下侧
         if (!isGridPath(leftBottom) && !isGridPath(rightBottom))
-            y = leftBottom.y    * this.step - this.ballDia;
+            y = leftBottom.y    * this.step - this.ballDia, this.ballSpeedY = 0;
         // 2.3. 右侧
         if (!isGridPath(rightTop)   && !isGridPath(rightBottom))
-            x = rightTop.x      * this.step - this.ballDia;
+            x = rightTop.x      * this.step - this.ballDia, this.ballSpeedX = 0;
         // 2.4. 上侧
         if (!isGridPath(leftTop)    && !isGridPath(rightTop))
-            y = (leftTop.y + 1) * this.step;
+            y = (leftTop.y + 1) * this.step, this.ballSpeedY = 0;
 
         return {x, y}
     }
@@ -852,22 +895,6 @@ class Maze {
     }
 }
 
-var elMaze = document.querySelector('#maze-grid');
-var elBall = document.querySelector('#ball');
-var elStartGame = document.querySelector('#start-game');
-
-var maze = new Maze(elMaze, elBall, 21, 21, 20);
-
-var keyHandler    = keyDownHandler,
-    motionHandler = deviceMotionHandler;
-
-elStartGame.setAttribute('onclick',
-    `maze.startMove(keyHandler, motionHandler)`);
-
-console.log(typeof DeviceMotionEvent);
-
-maze.startMove(keyHandler, motionHandler);
-
 /**
  * 处理键盘移动事件的回调函数
  *
@@ -879,7 +906,7 @@ function keyDownHandler(evt) {
     // ArrowUp ArrowLeft ArrowDown ArrowRight
 
     // 每个坐标的单步移动值
-    var step = 3;
+    var step = 5;
 
     switch (evt.key) {
         case 'w':
@@ -920,5 +947,24 @@ function deviceMotionHandler(evt) {
     var ax = -acc.x,
         ay = acc.y;
     
-    maze.moveBall(ax / 5, ay / 5);
+    maze.moveBall(ax / 2, ay / 2);
 }
+
+
+
+var elMaze      = document.querySelector('#maze-grid');
+var elBall      = document.querySelector('#ball');
+var elStartGame = document.querySelector('.start-game');
+
+var maze = new Maze(elMaze, elBall, 5, 31, 31, 10);
+
+var keyHandler    = keyDownHandler,
+    motionHandler = deviceMotionHandler;
+
+elStartGame.setAttribute('onclick',
+    `maze.startMove(keyHandler, motionHandler)`);
+
+if (typeof DeviceMotionEvent === 'undefined')
+    alert('浏览器不支持重力感应器！');
+
+// maze.startMove(keyHandler, motionHandler);

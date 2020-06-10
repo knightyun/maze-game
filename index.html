@@ -6,11 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Maze</title>
     <style>
-        #maze {
+        .maze {
             position: relative;
             margin-top: 2em;
-            margin-left: 50%;
-            transform: translateX(-50%);
+            /* margin-left: 50%;
+            transform: translateX(-50%); */
         }
         #maze-grid {
             position: absolute;
@@ -21,6 +21,14 @@
         #ball {
             position: absolute;
             border-radius: 50%;
+        }
+        .control {
+            position: absolute;
+            left: 35%;
+            top: 60%;
+        }
+        .start-game {
+            font-size: 1.5em;
         }
     </style>
     <script src="https://cdn.bootcss.com/vConsole/3.3.4/vconsole.min.js"></script>
@@ -33,11 +41,13 @@
 
 <body>
     <div class="container">
-        <div id="maze">
+        <div class="maze">
             <canvas id="maze-grid"></canvas>
             <div id="ball"></div>
         </div>
-        <button id="start-game">开始游戏</button>
+        <div class="control">
+            <button class="start-game">开始游戏</button>
+        </div>
     </div>
 </body>
 
