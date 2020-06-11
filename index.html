@@ -29,6 +29,7 @@
         }
         .start-game {
             font-size: 1.5em;
+            margin-bottom: 1em;
         }
     </style>
     <script src="https://cdn.bootcss.com/vConsole/3.3.4/vconsole.min.js"></script>
@@ -46,7 +47,9 @@
             <div id="ball"></div>
         </div>
         <div class="control">
-            <button class="start-game">开始游戏</button>
+            <button class="start-game" onclick="startGame()">开始游戏</button>
+            <br>
+            <button class="start-game" onclick="restartGame()">从新开始</button>
         </div>
     </div>
 </body>

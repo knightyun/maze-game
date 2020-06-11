@@ -51,25 +51,30 @@
 class Maze {
     /**
      * @constructor
-     * @param {Element} elMaze  承载迷宫的 canvas 元素
-     * @param {Element} elBall  绘制小球的元素
-     * @param {number}  ballDia 小球的直径（像素）
-     * @param {number}  w       迷宫宽度（格数）
-     * @param {number}  h       迷宫高度（格数）
-     * @param {*}       step    单元格大小
+     * @param {Element}  elMaze        承载迷宫的 canvas 元素
+     * @param {Element}  elBall        绘制小球的元素
+     * @param {number}   ballDia       小球的直径（像素）
+     * @param {number}   w             迷宫宽度（格数）
+     * @param {number}   h             迷宫高度（格数）
+     * @param {*}        step          单元格大小
+     * @param {function} keyHandler    键盘控制移动回调函数
+     * @param {function} motionHandler 手机控制移动回调函数
      * @memberof Maze
      */
-    constructor(elMaze, elBall, ballDia, w, h, step) {
-        this.w = w;
-        this.h = h;
-        this.step = step;
-        this.elMaze = elMaze;
-        this.elBall = elBall;
-        this.ballDia = ballDia;
-        this.ballSpeedX = 0; // 小球 x 轴方向的移动速度；
-        this.ballSpeedY = 0; // 小球 y 轴方向的移动速度；
-        this.G = 9.8; // 重力加速度
-        this.time = null; // 时间戳，用于设置重力加速度
+    constructor(elMaze, elBall, ballDia, w, h, step, keyHandler, motionHandler) {
+        this.w             = w;
+        this.h             = h;
+        this.step          = step;
+        this.elMaze        = elMaze;
+        this.elBall        = elBall;
+        this.ballDia       = ballDia;
+        this.keyHandler    = keyHandler;
+        this.motionHandler = motionHandler;
+
+        this.ballSpeedX = 0;    // 小球 x 轴方向的移动速度；
+        this.ballSpeedY = 0;    // 小球 y 轴方向的移动速度；
+        this.G          = 9.8;  // 重力加速度
+        this.time       = null; // 时间戳，用于设置重力加速度
         this.cvsCtx = this.elMaze.getContext('2d');
 
         // 包含所有格子的二维数组
@@ -694,8 +699,10 @@ class Maze {
     /**
      * 实现移动控制小球
      *
-     * @param {number} x 单次在 x 轴上移动的值
-     * @param {number} y 单次在 y 轴上移动的值
+     * @param {number} x  x 轴方向的重力加速度比率，10 >= x >= -10
+     *                    值的绝对值越大，越接近重力加速度
+     * @param {number} y  y 轴方向的重力加速度比率，10 >= y >= -10
+     *                    值的绝对值越大，越接近重力加速度
      * @memberof Maze
      */
     moveBall(x, y) {
@@ -705,55 +712,70 @@ class Maze {
         var bx = this.ballX,
             by = this.ballY;
 
-        // 无加速度版本：
-        // 移动后的坐标
-        // bx += x;
-        // by += y;
-
-        // 重力加速度版本：
-        // 每秒（近似为每次调用）速度增加量等于重力加速度
-        // 加速度的大小与倾斜角度（近似为 x，y 的值）成正比
+        // 应用重力加速度：
+        // 每秒速度增加量等于重力加速度；
+        // 加速度的大小与倾斜角度（近似为 x，y 的值）成正比；
         // 时间戳单位为 1/1000 秒，
-        // 重力加速度则为 G / 1000
+        // 重力加速度则为 G / 1000；
 
-        // 不同轴方向计算后的重力加速度
-        var gX = (this.G / 300) * (x / 10),
-            gY = (this.G / 300) * (y / 10);
+        // 不同轴方向换算后的加速度
+        var gX = (this.G / 1000) * (x / 10),
+            gY = (this.G / 1000) * (y / 10);
 
+        // 当前时间戳
+        var time = Date.now();
 
         // 每次调用根据时间戳确定要移动的距离
         if (!this.time) {
-            this.time = Date.now();
+            this.time = time;
         } else {
 
+            // 两次调用的时间间隔
+            var timeDur = time - this.time;
+
+            // 时间间隔阈值，超过这个值判断为小球停止后重新移动，
+            // 此时速度需要置 0
+            var timeout = 50;
+
             // 根据重力加速度增加速度
-            // 如果该方向没有移动，则速度置为 0
-            if (!x)
+            if (!x || timeDur > timeout) {
+
+                // 如果该方向没有移动，则速度置为 0
                 this.ballSpeedX = 0;
-            else
-                this.ballSpeedX += (Date.now() - this.time) * gX;
+            } else {
 
-            if (!y)
+                // 否则速度加上一个加速度值
+                this.ballSpeedX += timeDur * gX;
+            }
+
+            if (!y || timeDur > timeout) {
                 this.ballSpeedY = 0;
-            else
-                this.ballSpeedY += (Date.now() - this.time) * gY;
-
+            } else {
+                this.ballSpeedY += timeDur * gY;
+            }
         }
 
-        this.time = Date.now();
+        this.time = time;
 
+        // 移动后的坐标
         bx += this.ballSpeedX,
-            by += this.ballSpeedY;
-
+        by += this.ballSpeedY;
 
         // 把小球变换后的坐标限制在路内（防止穿墙）
         var validPos = this.getBallValidPosition(bx, by);
 
+        // 保存变换后的坐标
         this.ballX = validPos.x;
         this.ballY = validPos.y;
 
+        // 判断是否到达出口
+        if (this.ballX >= (this.exit.x * this.step) &&
+            this.ballY >= (this.exit.y * this.step)) {
+            this.arriveExit();
+        }
+        // 移动小球
         elBall.style.left = this.ballX + 'px';
-        elBall.style.top = this.ballY + 'px';
+        elBall.style.top  = this.ballY + 'px';
     }
 
     /**
@@ -886,17 +908,35 @@ class Maze {
     /**
      * 开始移动，添加事件监听
      *
-     * @param {function} handler 事件的回调函数
      * @memberof Maze
      */
-    startMove(keyHandler, motionHandler) {
-        // 监控键盘事件
-        window.addEventListener('keydown', keyHandler);
-
+    startMove() {
+        // 监控键盘移动事件
+        window.addEventListener('keydown', this.keyHandler);
+        
         // 监控移动端重力感应器事件
-        window.addEventListener('devicemotion', motionHandler);
+        window.addEventListener('devicemotion', this.motionHandler);
 
-        console.log('game started.')
+        console.log('game started.');
+        elStartGame.innerText = '开始游戏';
+        elStartGame.removeAttribute('disabled');
+    }
+ 
+    /**
+     * 小球到达出口后的操作
+     *
+     * @memberof Maze
+     */
+    arriveExit() {
+        console.log('arrive exit.');
+
+        // 停止控制小球
+        window.removeEventListener('keydown',      this.keyHandler);
+        window.removeEventListener('devicemotion', this.motionHandler);
+
+        // 信息提示
+        elStartGame.disabled = 'true';
+        elStartGame.innerText = '恭喜到达出口！请从新开始游戏';
     }
 }
 
@@ -910,8 +950,8 @@ function keyDownHandler(evt) {
     // w       a         s         d
     // ArrowUp ArrowLeft ArrowDown ArrowRight
 
-    // 每个坐标的单步移动值
-    var step = 2;
+    // 不同方向的移动加速度比率 [0, 10]
+    var step = 5;
 
     switch (evt.key) {
         case 'w':
@@ -948,26 +988,34 @@ function deviceMotionHandler(evt) {
     var acc = evt.accelerationIncludingGravity;
 
     // 右翻 x 为负，后翻 y 为正
-    // 最大都为 10
+    // 不同方向的重力加速度比率，范围 [-10, 10]
     var ax = -acc.x,
         ay = acc.y;
 
-    maze.moveBall(ax / 2, ay / 2);
+    maze.moveBall(ax, ay);
 }
 
+// 开始新游戏
+function restartGame() {
+    // 重新生成迷宫并移动小球
+    maze = new Maze(elMaze, elBall, 5, 31, 31, 10,
+                    keyDownHandler, deviceMotionHandler);
+    maze.startMove();
+}
 
+// 开始游戏
+function startGame() {
+    // 开始移动小球
+    maze.startMove();
+}
 
 var elMaze = document.querySelector('#maze-grid');
 var elBall = document.querySelector('#ball');
 var elStartGame = document.querySelector('.start-game');
 
-var maze = new Maze(elMaze, elBall, 5, 31, 31, 10);
+var maze = new Maze(elMaze, elBall, 5, 31, 31, 10,
+                    keyDownHandler, deviceMotionHandler);
 
-var keyHandler = keyDownHandler,
-    motionHandler = deviceMotionHandler;
-
-elStartGame.setAttribute('onclick',
-    `maze.startMove(keyHandler, motionHandler)`);
 
 if (typeof DeviceMotionEvent === 'undefined')
     alert('浏览器不支持重力感应器！');
