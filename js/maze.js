@@ -81,6 +81,14 @@ class Maze {
         this.ballSpeedY = 0;    // 小球 y 轴方向的移动速度；
         this.G          = 9.8;  // 重力加速度
         this.time       = null; // 时间戳，用于设置重力加速度
+        
+        // 游戏难度等级：
+        //   0 - 简单：随机返回一个候选方向；
+        //   1 - 困难：随机返回两个候选方向；
+        //   2 - 复杂：随机返回三个候选方向；（全部）
+        // this.gameLevel = +elGameLevel.value;
+        this.gameLevel = 0;
+        
         this.cvsCtx = this.elMaze.getContext('2d');
 
         // 包含所有格子的二维数组
@@ -420,12 +428,26 @@ class Maze {
      * @memberof Maze
      */
     getRandomDirection(directions) {
-        var len = directions.length;
+       // var len = directions.length;
+        var results = [];
 
         // 随机候选方向的索引
-        var idx = Math.round(Math.random() * (len - 1));
+        //var idx = Math.round(Math.random() * (len - 1));
+        
+        // 打乱数组
+        directions.sort(() => (0.5 - Math.random()));
+        
+        // 根据游戏难度返回候选方向
+        // 
+        for (let i = 0; i <= this.gameLevel; i++) {
+            // 如果候选方向个数少于相应游戏难度的，
+            // 则直接中断
+            if (!directions[i]) break;
+            
+            results.push(directions[i]);
+        }
 
-        return [directions[idx]];
+        return results;
     }
 
     /**
@@ -670,12 +692,13 @@ class Maze {
 
         for (let i = 0; i < directions.length; i++) {
             // debug
-            // setTimeout(ctx.drawPath, 0, directions[i],
-            //            mazeGrids[fwdY][fwdX], pathColor, ctx);
+            setTimeout(ctx.drawPath, 1000, directions[i],
+                        mazeGrids[fwdY][fwdX], pathColor, ctx);
 
             // normal
+            /*
             ctx.drawPath(directions[i], mazeGrids[fwdY][fwdX],
-                pathColor, ctx);
+                pathColor, ctx);*/
         }
     }
 
@@ -1013,6 +1036,8 @@ function restartGame() {
 function startGame() {
     // 开始移动小球
     maze.startMove();
+    
+    elStartGame.classList.add('disabled');
 
     M.toast({
         html: '<span class="teal-text text-accent-2">游戏开始！</span>',
@@ -1022,6 +1047,8 @@ function startGame() {
 
 var elMaze = document.querySelector('#maze-map');
 var elBall = document.querySelector('#maze-ball');
+var elStartGame = document.querySelector('.start-game');
+var elGameLevel = document.querySelector('.game-level');
 
 var maze = new Maze(elMaze, elBall, 5, 31, 31, 10,
                     keyDownHandler, deviceMotionHandler);
