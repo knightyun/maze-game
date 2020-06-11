@@ -1,4 +1,10 @@
-/*
+/**
+ * 走迷宫游戏的实现. (https://github.com/knightyun/maze-game)
+ * Copyright 2020 knightyun. <https://raw.githubusercontent.com/knightyun/maze-game/master/maze.js>
+ * MIT License. <https://raw.githubusercontent.com/knightyun/maze-game/master/LICENSE>
+ */
+
+/* 分析：
     迷宫特点：
         路与墙成对出现；
         经历保证长宽都为奇数；
@@ -916,10 +922,6 @@ class Maze {
         
         // 监控移动端重力感应器事件
         window.addEventListener('devicemotion', this.motionHandler);
-
-        console.log('game started.');
-        elStartGame.innerText = '开始游戏';
-        elStartGame.removeAttribute('disabled');
     }
  
     /**
@@ -935,8 +937,12 @@ class Maze {
         window.removeEventListener('devicemotion', this.motionHandler);
 
         // 信息提示
-        elStartGame.disabled = 'true';
-        elStartGame.innerText = '恭喜到达出口！请从新开始游戏';
+        M.toast({
+            html: `<span class="orange-text text-accent-4">
+                     ✨恭喜抵达出口🎉！请重新开始游戏
+                   </span>`,
+            displayLength: 3000
+        })
     }
 }
 
@@ -1007,17 +1013,18 @@ function restartGame() {
 function startGame() {
     // 开始移动小球
     maze.startMove();
+
+    M.toast({
+        html: '<span class="teal-text text-accent-2">游戏开始！</span>',
+        displayLength: 1000
+    })
 }
 
-var elMaze = document.querySelector('#maze-grid');
-var elBall = document.querySelector('#ball');
-var elStartGame = document.querySelector('.start-game');
+var elMaze = document.querySelector('#maze-map');
+var elBall = document.querySelector('#maze-ball');
 
 var maze = new Maze(elMaze, elBall, 5, 31, 31, 10,
                     keyDownHandler, deviceMotionHandler);
 
-
 if (typeof DeviceMotionEvent === 'undefined')
     alert('浏览器不支持重力感应器！');
-
-// maze.startMove(keyHandler, motionHandler);
