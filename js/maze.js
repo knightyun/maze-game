@@ -962,7 +962,7 @@ class Maze {
         // 信息提示
         M.toast({
             html: `<span class="orange-text text-accent-4">
-                     ✨恭喜抵达出口🎉！请重新开始游戏
+                     ✨恭喜抵达出口🎉🎉请重新开始游戏
                    </span>`,
             displayLength: 3000
         })
@@ -1040,8 +1040,10 @@ function startGame() {
     elStartGame.classList.add('disabled');
 
     M.toast({
-        html: '<span class="teal-text text-accent-2">游戏开始！</span>',
-        displayLength: 1000
+        html: `<span class="teal-text text-accent-2">
+                 游戏开始！请晃动手机来移动小球
+               </span>`,
+        displayLength: 2000
     })
 }
 
