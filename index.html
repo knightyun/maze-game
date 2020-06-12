@@ -2,52 +2,52 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Maze</title>
-    <link rel="stylesheet" href="./css/materialize.min.css">
-    <link rel="stylesheet" href="./css/index.css">
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Maze</title>
+	<link rel="stylesheet" href="./css/materialize.min.css">
+	<link rel="stylesheet" href="./css/index.css">
 
-    <script src="./js/materialize.min.js" defer></script>
-    <script src="./js/materialize-init.js" defer></script>
-    <script src="./js/maze.js" defer></script>
+	<script src="./js/materialize.min.js" defer></script>
+	<script src="./js/materialize-init.js" defer></script>
+	<script src="./js/maze.js" defer></script>
 </head>
 
 <body class="blue lighten-4">
-    <div class="container center-align">
-        <div class="row"></div>
-        <div class="row"></div>
-        
-        <div class="row">
-            <div class="maze">
-                <canvas id="maze-map" class="z-depth-5"></canvas>
-                <div id="maze-ball"></div>
-            </div>
-        </div>
-        
-        <div class="row center-align">
-            <div class="control teal col s12 m6 offset-m3 z-depth-3 row">
-                <div class="row"></div>
-                <div class="input-field col s6 offset-s3 teal lighten-1">
-                    <select class="game-level">
-                        <option value="0" selected>简单</option>
-                        <option value="1">困难</option>
-                        <option value="2">复杂</option>
-                    </select>
-                    <label class="blue-text text-lighten-4 center-align">选择游戏难度：</label>
-                </div>
-                
-                <div class="col s12">
-                <button class="start-game btn waves-effect waves-light"
-                    onclick="startGame()">开始游戏</button>
-                <button class="btn waves-effect offset-m3 waves-light"
-                    onclick="restartGame()">重新开始</button>
-                </div>
-                
-                <div class="row"></div>
-            </div>
-        </div>
-    </div>
+	<div class="container center-align">
+		<div class="row"></div>
+		<div class="row"></div>
+
+		<div class="row">
+			<div class="maze left-align">
+				<canvas id="maze-map" class="z-depth-5"></canvas>
+				<div id="maze-ball"></div>
+			</div>
+		</div>
+
+		<div class="row center-align">
+			<div class="control teal col s12 m6 offset-m3 z-depth-3 row">
+				<div class="row"></div>
+				<div class="input-field col s6 offset-s3 teal lighten-1">
+					<select class="game-level">
+						<option value="0" selected>简单</option>
+						<option value="1">困难</option>
+						<option value="2">复杂</option>
+					</select>
+					<label class="blue-text text-lighten-4 center-align">选择游戏难度：</label>
+				</div>
+
+				<div class="col s12">
+					<button class="start-game btn waves-effect waves-light"
+					onclick="startGame()">开始游戏</button>
+					<button class="btn waves-effect offset-m3 waves-light"
+					onclick="restartGame()">重新开始</button>
+				</div>
+
+				<div class="row"></div>
+			</div>
+		</div>
+	</div>
 </body>
 
 </html>

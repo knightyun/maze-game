@@ -87,7 +87,7 @@ class Maze {
         //   1 - 困难：随机返回两个候选方向；
         //   2 - 复杂：随机返回三个候选方向；（全部）
         // this.gameLevel = +elGameLevel.value;
-        this.gameLevel = 0;
+        this.gameLevel = 1;
         
         this.cvsCtx = this.elMaze.getContext('2d');
 
@@ -693,13 +693,15 @@ class Maze {
         for (let i = 0; i < directions.length; i++) {
             // debug
             
-            setTimeout(ctx.drawPath, 1000, directions[i],
-                        mazeGrids[fwdY][fwdX], pathColor, ctx);
+            // setTimeout(ctx.drawPath, 1000, directions[i],
+            //             mazeGrids[fwdY][fwdX], pathColor, ctx);
+
+            // 加一个判断当前方向是否仍然有效
+            // 后期挖路可能会使该方向无效
 
             // normal
-            /*
             ctx.drawPath(directions[i], mazeGrids[fwdY][fwdX],
-                pathColor, ctx);*/
+                pathColor, ctx);
         }
     }
 
@@ -1028,8 +1030,7 @@ function deviceMotionHandler(evt) {
 // 开始新游戏
 function restartGame() {
     // 重新生成迷宫并移动小球
-    maze = new Maze(elMaze, elBall, 5, 31, 31, 10,
-                    keyDownHandler, deviceMotionHandler);
+    maze = genMaze();
     maze.startMove();
 }
 
@@ -1048,13 +1049,18 @@ function startGame() {
     })
 }
 
+// 生成迷宫
+function genMaze() {
+    return new Maze(elMaze, elBall, 5, 5, 5, 10,
+                    keyDownHandler, deviceMotionHandler);
+}
+
 var elMaze = document.querySelector('#maze-map');
 var elBall = document.querySelector('#maze-ball');
 var elStartGame = document.querySelector('.start-game');
 var elGameLevel = document.querySelector('.game-level');
 
-var maze = new Maze(elMaze, elBall, 5, 31, 31, 10,
-                    keyDownHandler, deviceMotionHandler);
+var maze = genMaze();
 
 if (typeof DeviceMotionEvent === 'undefined')
     alert('浏览器不支持重力感应器！');
