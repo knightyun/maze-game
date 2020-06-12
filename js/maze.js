@@ -692,6 +692,7 @@ class Maze {
 
         for (let i = 0; i < directions.length; i++) {
             // debug
+            
             setTimeout(ctx.drawPath, 1000, directions[i],
                         mazeGrids[fwdY][fwdX], pathColor, ctx);
 
