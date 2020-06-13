@@ -87,7 +87,7 @@ class Maze {
         //   1 - 困难：随机返回两个候选方向；
         //   2 - 复杂：随机返回三个候选方向；（全部）
         // this.gameLevel = +elGameLevel.value;
-        this.gameLevel = 0;
+        this.gameLevel = 1;
 
         this.cvsCtx = this.elMaze.getContext('2d');
 
@@ -649,6 +649,9 @@ class Maze {
         ctx = ctx || this;
 
         var mazeGrids = ctx.mazeGrids;
+        
+        // 先判断当前绘制的路是否有效
+        // 无效直接返回
 
         // 绘制路
         ctx.fillGrid(x, y, pathColor);
@@ -696,16 +699,16 @@ class Maze {
         for (let i = 0; i < directions.length; i++) {
             // debug
             
-            // setTimeout(ctx.drawPath, 1000, directions[i],
-            //             mazeGrids[fwdY][fwdX], pathColor, ctx);
+             setTimeout(ctx.drawPath, 1000, directions[i],
+                        mazeGrids[fwdY][fwdX], pathColor, ctx);
 
             // 加一个判断当前方向是否仍然有效
             // 后期挖路可能会使该方向无效
 
             // normal
-
+/*
             ctx.drawPath(directions[i], mazeGrids[fwdY][fwdX],
-                pathColor, ctx);
+                pathColor, ctx);*/
         }
     }
 

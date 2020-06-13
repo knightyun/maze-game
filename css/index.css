@@ -7,3 +7,7 @@
     position: absolute;
     border-radius: 50%;
 }
+
+.control {
+    border-radius: 5px;
+}
