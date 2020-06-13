@@ -87,8 +87,8 @@ class Maze {
         //   1 - 困难：随机返回两个候选方向；
         //   2 - 复杂：随机返回三个候选方向；（全部）
         // this.gameLevel = +elGameLevel.value;
-        this.gameLevel = 1;
-        
+        this.gameLevel = 0;
+
         this.cvsCtx = this.elMaze.getContext('2d');
 
         // 包含所有格子的二维数组
@@ -159,13 +159,16 @@ class Maze {
         }
 
         // 画墙和出入口
-        this.drawWall('black', 'white');
+        this.drawWall('#004d40', 'white');
+
+        // 内部墙的颜色
+        elMaze.style.background = '#4D4040';
 
         // 挖路
-        this.drawPath(entrance, { x: 1, y: -1 }, 'white');
+        this.drawPath(entrance, { x: 1, y: -1 }, '#e0f2f1');
 
         // 画小球
-        this.drawBall(elBall, ballDia, 'red');
+        this.drawBall(elBall, ballDia);
     }
 
     /**
@@ -700,6 +703,7 @@ class Maze {
             // 后期挖路可能会使该方向无效
 
             // normal
+
             ctx.drawPath(directions[i], mazeGrids[fwdY][fwdX],
                 pathColor, ctx);
         }
@@ -710,10 +714,9 @@ class Maze {
      *
      * @param {Element} elBall    用于绘制小球的元素
      * @param {number}  d         小球的直径
-     * @param {string}  ballColor 小球的颜色
      * @memberof Maze
      */
-    drawBall(elBall, d, ballColor) {
+    drawBall(elBall, d) {
 
         // 初始化小球坐标
         this.ballX = this.entrance.x * this.step;
@@ -724,7 +727,6 @@ class Maze {
         elBall.style.height = d + 'px';
         elBall.style.left = this.ballX + 'px';
         elBall.style.top = this.ballY + 'px';
-        elBall.style.background = ballColor;
 
     }
 
@@ -1051,14 +1053,14 @@ function startGame() {
 
 // 生成迷宫
 function genMaze() {
-    return new Maze(elMaze, elBall, 5, 5, 5, 10,
+    return new Maze(elMaze, elBall, 5, 31, 31, 10,
                     keyDownHandler, deviceMotionHandler);
 }
 
-var elMaze = document.querySelector('#maze-map');
-var elBall = document.querySelector('#maze-ball');
-var elStartGame = document.querySelector('.start-game');
-var elGameLevel = document.querySelector('.game-level');
+var elMaze      = document.querySelector('#maze-map'),
+    elBall      = document.querySelector('#maze-ball'),
+    elStartGame = document.querySelector('.start-game'),
+    elGameLevel = document.querySelector('.game-level');
 
 var maze = genMaze();
 

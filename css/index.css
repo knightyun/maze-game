@@ -3,10 +3,6 @@
     display: inline-block;
 }
 
-#maze-map {
-    background: black;
-}
-
 #maze-ball {
     position: absolute;
     border-radius: 50%;
