@@ -57,25 +57,28 @@
 class Maze {
     /**
      * @constructor
-     * @param {Element}  elMaze        承载迷宫的 canvas 元素
-     * @param {Element}  elBall        绘制小球的元素
-     * @param {number}   ballDia       小球的直径（像素）
-     * @param {number}   w             迷宫宽度（格数）
-     * @param {number}   h             迷宫高度（格数）
-     * @param {*}        step          单元格大小
-     * @param {function} keyHandler    键盘控制移动回调函数
-     * @param {function} motionHandler 手机控制移动回调函数
+     * @param {object}   options
+     * @param {Element}  options.elMaze        - 承载迷宫的 canvas 元素
+     * @param {Element}  options.elBall        - 绘制小球的元素
+     * @param {number}   [options.ballDia=5]   - 小球的直径（像素）
+     * @param {number}   [options.width=31]    - 迷宫宽度（格数）
+     * @param {number}   [options.height=31]   - 迷宫高度（格数）
+     * @param {number}   [options.step=10]     - 单元格大小
+     * @param {number}   [options.gameLevel=0] - 游戏难度等级
+     * @param {function} options.keyHandler    - 键盘控制移动回调函数
+     * @param {function} options.motionHandler - 手机控制移动回调函数
      * @memberof Maze
      */
-    constructor(elMaze, elBall, ballDia, w, h, step, keyHandler, motionHandler) {
-        this.w             = w;
-        this.h             = h;
-        this.step          = step;
-        this.elMaze        = elMaze;
-        this.elBall        = elBall;
-        this.ballDia       = ballDia;
-        this.keyHandler    = keyHandler;
-        this.motionHandler = motionHandler;
+    constructor(options) {
+        this.elMaze        = options.elMaze;
+        this.elBall        = options.elBall;
+        this.w             = options.width     || 31;
+        this.h             = options.height    || 31;
+        this.step          = options.step      || 10;
+        this.ballDia       = options.ballDia   || 5;
+        this.gameLevel     = options.gameLevel || 0;
+        this.keyHandler    = options.keyHandler;
+        this.motionHandler = options.motionHandler;
 
         this.ballSpeedX = 0;    // 小球 x 轴方向的移动速度；
         this.ballSpeedY = 0;    // 小球 y 轴方向的移动速度；
@@ -86,8 +89,6 @@ class Maze {
         //   0 - 简单：随机返回一个候选方向；
         //   1 - 困难：随机返回两个候选方向；
         //   2 - 复杂：随机返回三个候选方向；（全部）
-        // this.gameLevel = +elGameLevel.value;
-        this.gameLevel = 1;
 
         this.cvsCtx = this.elMaze.getContext('2d');
 
@@ -102,8 +103,8 @@ class Maze {
 
         // 出口位置
         this.exit = {
-            x: w - 2,
-            y: h - 1
+            x: this.w - 2,
+            y: this.h - 1
         }
 
         this.initMaze();
@@ -431,22 +432,35 @@ class Maze {
      * @memberof Maze
      */
     getRandomDirection(directions) {
-       // var len = directions.length;
         var results = [];
-
-        // 随机候选方向的索引
-        //var idx = Math.round(Math.random() * (len - 1));
         
         // 打乱数组
         directions.sort(() => (0.5 - Math.random()));
         
         // 根据游戏难度返回候选方向
-        // 
+        //   gameLevel = 0：一条；
+        //   gameLevel = 1：两条；
+        //   gameLevel = 2：三条；
+        //
+        // 需要返回的候选方向个数大于 1 时，
+        // 如果每次都返回一条以上，会导致迷宫规律化，
+        // 所以需要控制生成多个候选方向时的概率，如 40%
+
+        // 多个候选方向可以出现的最大概率
+        var maxRatio = 0.3;
+
+        // 当前的随机概率
+        var ratio = Math.random();
+
         for (let i = 0; i <= this.gameLevel; i++) {
             // 如果候选方向个数少于相应游戏难度的，
             // 则直接中断
             if (!directions[i]) break;
             
+            // 如果当前概率大于最大概率，
+            // 则只返回第一个候选方向
+            if (i > 0 && ratio > maxRatio) break;
+
             results.push(directions[i]);
         }
 
@@ -650,73 +664,69 @@ class Maze {
 
         var mazeGrids = ctx.mazeGrids;
         
-        // 先判断当前绘制的路是否有效
-        // 无效直接返回
-
-        // 绘制路
-        ctx.fillGrid(x, y, pathColor);
-
-        // 标记当前格子为路
-        mazeGrids[y][x].isPath = true;
-
-        // 是出口则直接停止
+        // 是出口则直接绘制后停止
         if (mazeGrids[y][x].isExit) {
-            console.log('find exit.');
+            ctx.fillGrid(x, y, pathColor);
+            mazeGrids[y][x].isPath = true;
+            
             return;
         }
 
         // 获取前面方向的格子
-        var fwdGrid = ctx.getFrontGrid(preX, preY, x, y);
-        var fwdX = fwdGrid.x,
-            fwdY = fwdGrid.y;
+        var frontGrid = ctx.getFrontGrid(preX, preY, x, y);
+        var fx = frontGrid.x,
+            fy = frontGrid.y;
+        
+        // 先判断当前绘制的路是否有效：
+        //   当前格子不是路；
+        //   当前格子前面不是路；
+        // 无效直接返回
+        if (mazeGrids[y][x].isPath || mazeGrids[fy][fx].isPath)
+            return;
+
+        // 绘制路（第一格）
+        ctx.fillGrid(x, y, pathColor);
+        mazeGrids[y][x].isPath = true;
 
         // 画同方向第二格路
-        ctx.fillGrid(fwdX, fwdY, pathColor)
-        mazeGrids[fwdY][fwdX].isPath = true;
+        ctx.fillGrid(fx, fy, pathColor)
+        mazeGrids[fy][fx].isPath = true;
 
 
         // 获取候选方向（第二格的）
-        var directions = ctx.getValidDirections(fwdX, fwdY);
+        var directions = ctx.getValidDirections(fx, fy);
 
         // 递归挖路结束
         if (directions.length === 0) {
             return;
         }
 
-        // 标记候选方向
-        // for (let i = 0;  i < directions.length; i++) {
-        //     ctx.fillGrid(directions[i].x, directions[i].y, 'rgba(0, 255, 0, .3)');
-        // }
 
         // 处理分叉情况，获取最终要挖的所有方向
-        directions = ctx.forkPath(grid, fwdGrid, directions);
-
-        // 标记选择方向
-        // for (let i = 0;  i < directions.length; i++) {
-        //     ctx.fillGrid(directions[i].x, directions[i].y, 'rgba(0, 0, 255, .3)');
-        // }
+        directions = ctx.forkPath(grid, frontGrid, directions);
 
         for (let i = 0; i < directions.length; i++) {
-            // debug
             
-             setTimeout(ctx.drawPath, 1000, directions[i],
-                        mazeGrids[fwdY][fwdX], pathColor, ctx);
+            // 使用计时器可以利用事件队列的特性，同时挖多个候选方向
+            // 使用同步方式递归会导致一条路挖到头，剩下候选方向无效
+             setTimeout(ctx.drawPath, 0, directions[i],
+                        mazeGrids[fy][fx], pathColor, ctx);
 
             // 加一个判断当前方向是否仍然有效
             // 后期挖路可能会使该方向无效
 
             // normal
-/*
-            ctx.drawPath(directions[i], mazeGrids[fwdY][fwdX],
-                pathColor, ctx);*/
+
+            // ctx.drawPath(directions[i], mazeGrids[fy][fx],
+            //     pathColor, ctx);
         }
     }
 
     /**
      * 画出走迷宫的小球
      *
-     * @param {Element} elBall    用于绘制小球的元素
-     * @param {number}  d         小球的直径
+     * @param {Element} elBall 用于绘制小球的元素
+     * @param {number}  d      小球的直径
      * @memberof Maze
      */
     drawBall(elBall, d) {
@@ -1055,17 +1065,43 @@ function startGame() {
 }
 
 // 生成迷宫
-function genMaze() {
-    return new Maze(elMaze, elBall, 5, 31, 31, 10,
-                    keyDownHandler, deviceMotionHandler);
+function genMaze(options) {
+    var _options = Object.assign({
+        elMaze:        elMaze,
+        elBall:        elBall,
+        ballDia:       5,
+        width:         41,
+        height:        41,
+        step:          10,
+        gameLevel:     0,
+        keyHandler:    keyDownHandler,
+        motionHandler: deviceMotionHandler
+    }, options);
+
+    return new Maze(_options);
 }
 
-var elMaze      = document.querySelector('#maze-map'),
-    elBall      = document.querySelector('#maze-ball'),
-    elStartGame = document.querySelector('.start-game'),
-    elGameLevel = document.querySelector('.game-level');
+var elMaze       = document.querySelector('#maze-map'),
+    elBall       = document.querySelector('#maze-ball'),
+    elStartGame  = document.querySelector('.start-game'),
+    elGameLevel  = document.querySelector('.game-level');
 
+    
 var maze = genMaze();
+
+// 监听游戏难度调整
+// elGameLevel.onchange = function() {
+//     maze = genMaze({
+//         gameLevel: +this.value
+//     })
+// }
+
+elGameLevel.addEventListener('change', function() {
+    console.log('change');
+    maze = genMaze({
+        gameLevel: +this.value
+    })
+})
 
 if (typeof DeviceMotionEvent === 'undefined')
     alert('浏览器不支持重力感应器！');
