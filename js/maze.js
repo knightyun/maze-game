@@ -697,9 +697,8 @@ class Maze {
         var directions = ctx.getValidDirections(fx, fy);
 
         // 递归挖路结束
-        if (directions.length === 0) {
+        if (directions.length === 0)
             return;
-        }
 
 
         // 处理分叉情况，获取最终要挖的所有方向
@@ -711,14 +710,6 @@ class Maze {
             // 使用同步方式递归会导致一条路挖到头，剩下候选方向无效
              setTimeout(ctx.drawPath, 0, directions[i],
                         mazeGrids[fy][fx], pathColor, ctx);
-
-            // 加一个判断当前方向是否仍然有效
-            // 后期挖路可能会使该方向无效
-
-            // normal
-
-            // ctx.drawPath(directions[i], mazeGrids[fy][fx],
-            //     pathColor, ctx);
         }
     }
 
@@ -1000,6 +991,9 @@ function keyDownHandler(evt) {
     // 不同方向的移动加速度比率 [0, 10]
     var step = 5;
 
+    // 阻止默认移动行为
+    evt.preventDefault();
+
     switch (evt.key) {
         case 'w':
         case 'ArrowUp':
@@ -1042,10 +1036,14 @@ function deviceMotionHandler(evt) {
     maze.moveBall(ax, ay);
 }
 
-// 开始新游戏
+// 重新开始游戏
 function restartGame() {
     // 重新生成迷宫并移动小球
-    maze = genMaze();
+    maze = genMaze({
+        width:     +elMazeSize.value,
+        height:    +elMazeSize.value,
+        gameLevel: +elGameLevel.value
+    });
     maze.startMove();
 }
 
@@ -1055,13 +1053,25 @@ function startGame() {
     maze.startMove();
     
     elStartGame.classList.add('disabled');
-
-    M.toast({
-        html: `<span class="teal-text text-accent-2">
-                 游戏开始！请晃动手机来移动小球
-               </span>`,
-        displayLength: 2000
-    })
+    if (typeof DeviceMotionEvent === 'undefined') {
+        M.toast({
+            html: `<span class="red-text">
+                     该浏览器不支持重力感应器！<br>
+                     <span class="red-text text-lighten-3">
+                       请使用方向键移动小球
+                     </span>
+                   </span>
+                   `
+        })
+    } else {
+        M.toast({
+            html: `<span class="teal-text text-accent-2">
+                     游戏开始！<br>
+                     请晃动手机，或使用方向键移动小球
+                   </span>`,
+            displayLength: 2000
+        })
+    }
 }
 
 // 生成迷宫
@@ -1069,11 +1079,6 @@ function genMaze(options) {
     var _options = Object.assign({
         elMaze:        elMaze,
         elBall:        elBall,
-        ballDia:       5,
-        width:         41,
-        height:        41,
-        step:          10,
-        gameLevel:     0,
         keyHandler:    keyDownHandler,
         motionHandler: deviceMotionHandler
     }, options);
@@ -1081,27 +1086,38 @@ function genMaze(options) {
     return new Maze(_options);
 }
 
-var elMaze       = document.querySelector('#maze-map'),
-    elBall       = document.querySelector('#maze-ball'),
-    elStartGame  = document.querySelector('.start-game'),
-    elGameLevel  = document.querySelector('.game-level');
+var elMaze        = document.querySelector('#maze-map'),
+    elBall        = document.querySelector('#maze-ball'),
+    elMazeWrapper = document.querySelector('.maze'),
+    elControl     = document.querySelector('.control'),
+    elStartGame   = document.querySelector('.start-game'),
+    elGameLevel   = document.querySelector('.game-level'),
+    elMazeSize    = document.querySelector('.maze-size');
 
-    
 var maze = genMaze();
 
-// 监听游戏难度调整
-// elGameLevel.onchange = function() {
-//     maze = genMaze({
-//         gameLevel: +this.value
-//     })
-// }
 
-elGameLevel.addEventListener('change', function() {
-    console.log('change');
+// 监听地图尺寸调整
+elMazeSize.addEventListener('change', function() {
     maze = genMaze({
+        width:     +this.value,
+        height:    +this.value,
+        gameLevel: +elGameLevel.value
+    });
+    
+    elMazeWrapper.style.width = maze.w * maze.step + 'px';
+    elMazeWrapper.style.zoom = elControl.clientWidth / (maze.w * maze.step)
+});
+
+// 监听游戏难度调整
+elGameLevel.addEventListener('change', function() {
+    maze = genMaze({
+        width:     +elMazeSize.value,
+        height:    +elMazeSize.value,
         gameLevel: +this.value
     })
-})
+});
 
-if (typeof DeviceMotionEvent === 'undefined')
-    alert('浏览器不支持重力感应器！');
+// 缩放迷宫地图以适应页面
+elMazeWrapper.style.width = maze.w * maze.step + 'px';
+elMazeWrapper.style.zoom = elControl.clientWidth / (maze.w * maze.step)
