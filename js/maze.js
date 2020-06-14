@@ -973,10 +973,10 @@ class Maze {
         window.removeEventListener('devicemotion', this.motionHandler);
 
         // 信息提示
-        if (this.w === 101) {
+        if (this.w === 31) {
             // 游戏彩蛋
             $('.fireworks').fireworks({
-                sound:   true,
+                sound:   false,
                 opacity: 1,
                 width:   '80%',
                 height:  '100%'
