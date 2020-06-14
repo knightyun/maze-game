@@ -725,6 +725,10 @@ class Maze {
         // 初始化小球坐标
         this.ballX = this.entrance.x * this.step;
         this.ballY = this.entrance.y * this.step;
+        
+        // debug
+        // this.ballX = this.exit.x * this.step;
+        // this.ballY = (this.exit.y - 1) * this.step;
 
         // 初始化位置、大小、颜色
         elBall.style.width = d + 'px';
@@ -969,12 +973,23 @@ class Maze {
         window.removeEventListener('devicemotion', this.motionHandler);
 
         // 信息提示
-        M.toast({
-            html: `<span class="orange-text text-accent-4">
+        if (this.w === 101) {
+            // 游戏彩蛋
+            $('.fireworks').fireworks({
+                sound:   true,
+                opacity: 1,
+                width:   '80%',
+                height:  '100%'
+            });
+            elModalTrigger.click()
+        } else {
+            M.toast({
+                html: `<span class="orange-text text-accent-4">
                      ✨恭喜抵达出口🎉🎉请重新开始游戏
                    </span>`,
-            displayLength: 3000
-        })
+                displayLength: 3000
+            })
+        }
     }
 }
 
@@ -1086,13 +1101,14 @@ function genMaze(options) {
     return new Maze(_options);
 }
 
-var elMaze        = document.querySelector('#maze-map'),
-    elBall        = document.querySelector('#maze-ball'),
-    elMazeWrapper = document.querySelector('.maze'),
-    elControl     = document.querySelector('.control'),
-    elStartGame   = document.querySelector('.start-game'),
-    elGameLevel   = document.querySelector('.game-level'),
-    elMazeSize    = document.querySelector('.maze-size');
+var elMaze         = document.querySelector('#maze-map'),
+    elBall         = document.querySelector('#maze-ball'),
+    elMazeWrapper  = document.querySelector('.maze'),
+    elControl      = document.querySelector('.control'),
+    elStartGame    = document.querySelector('.start-game'),
+    elGameLevel    = document.querySelector('.game-level'),
+    elMazeSize     = document.querySelector('.maze-size'),
+    elModalTrigger = document.querySelector('.modal-trigger');
 
 var maze = genMaze();
 
