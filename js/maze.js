@@ -723,18 +723,18 @@ class Maze {
     drawBall(elBall, d) {
 
         // 初始化小球坐标
-        this.ballX = this.entrance.x * this.step;
-        this.ballY = this.entrance.y * this.step;
+        // this.ballX = this.entrance.x * this.step;
+        // this.ballY = this.entrance.y * this.step;
         
         // debug
-        // this.ballX = this.exit.x * this.step;
-        // this.ballY = (this.exit.y - 1) * this.step;
+        this.ballX = this.exit.x * this.step;
+        this.ballY = (this.exit.y - 1) * this.step;
 
         // 初始化位置、大小、颜色
-        elBall.style.width = d + 'px';
+        elBall.style.width  = d + 'px';
         elBall.style.height = d + 'px';
-        elBall.style.left = this.ballX + 'px';
-        elBall.style.top = this.ballY + 'px';
+        elBall.style.left   = this.ballX + 'px';
+        elBall.style.top    = this.ballY + 'px';
 
     }
 
@@ -973,17 +973,26 @@ class Maze {
         // 信息提示
         if (this.w === 101) {
             // 游戏彩蛋
+            var elModalTrigger = document.querySelector('.modal-trigger'),
+                elModalClose   = document.querySelector('.modal-close');
+
             $('.fireworks').fireworks({
-                sound:   false,
+                sound:   true,
                 opacity: 1,
                 width:   '80%',
                 height:  '100%'
             });
-            elModalTrigger.click()
+            
+            elModalTrigger.click();
+
+            elModalClose.addEventListener('click', () => {
+                location.reload();
+            });
         } else {
+            // 正常提示
             M.toast({
                 html: `<span class="orange-text text-accent-4">
-                     ✨恭喜抵达出口🎉🎉请重新开始游戏
+                     ✨✨恭喜抵达出口🎉🎉请重新开始游戏
                    </span>`,
                 displayLength: 3000
             })
@@ -1105,8 +1114,7 @@ var elMaze         = document.querySelector('#maze-map'),
     elControl      = document.querySelector('.control'),
     elStartGame    = document.querySelector('.start-game'),
     elGameLevel    = document.querySelector('.game-level'),
-    elMazeSize     = document.querySelector('.maze-size'),
-    elModalTrigger = document.querySelector('.modal-trigger');
+    elMazeSize     = document.querySelector('.maze-size');
 
 var maze = genMaze();
 
