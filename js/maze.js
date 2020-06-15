@@ -75,7 +75,7 @@ class Maze {
         this.w             = options.width     || 31;
         this.h             = options.height    || 31;
         this.step          = options.step      || 10;
-        this.ballDia       = options.ballDia   || 5;
+        this.ballDia       = options.ballDia   || 6;
         this.gameLevel     = options.gameLevel || 0;
         this.keyHandler    = options.keyHandler;
         this.motionHandler = options.motionHandler;
@@ -966,14 +966,12 @@ class Maze {
      * @memberof Maze
      */
     arriveExit() {
-        console.log('arrive exit.');
-
         // 停止控制小球
         window.removeEventListener('keydown',      this.keyHandler);
         window.removeEventListener('devicemotion', this.motionHandler);
 
         // 信息提示
-        if (this.w === 101) {
+        if (this.w === 31) {
             // 游戏彩蛋
             $('.fireworks').fireworks({
                 sound:   false,
