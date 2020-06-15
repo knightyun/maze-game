@@ -652,8 +652,7 @@ class Maze {
         var directions = ctx.getValidDirections(fx, fy);
 
         // 递归挖路结束
-        if (directions.length === 0)
-            return;
+        if (directions.length === 0) return;
 
 
         // 处理分叉情况，获取最终要挖的所有方向
