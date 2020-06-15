@@ -85,6 +85,10 @@ class Maze {
         elMaze.width = w * step;
         elMaze.height = h * step;
 
+        // 移除移动操作监听
+        window.removeEventListener('keydown',      this.keyHandler);
+        window.removeEventListener('devicemotion', this.motionHandler);
+
         // 绘画初始迷宫，包括围墙，出入口，
         // 并初始化每个单元格的信息
         for (var y = 0; y < h; y++) {
@@ -99,17 +103,18 @@ class Maze {
                     x: x,
                     y: y,
                     // 判断是否是围墙
-                    isWall: (x === 0 || y === 0 ||
-                        x === w - 1 ||
-                        y === h - 1),
+                    isWall: (x === 0     || y === 0    ||
+                             x === w - 1 || y === h - 1),
                     // 是否为入口
                     isEntrance: x === entrance.x &&
-                        y === entrance.y,
+                                y === entrance.y,
                     // 是否为出口
                     isExit: x === exit.x &&
-                        y === exit.y,
+                            y === exit.y,
                     // 判断是否为路：后期画路时置为 true
-                    isPath: false
+                    isPath: false,
+                    // 链接上一个格子，用于搜索迷宫的解
+                    preGrid: null
                 }
             }
         }
@@ -602,16 +607,14 @@ class Maze {
      * 从 this.start 开始，到无路后结束
      *
      * @param {object} grid      当前格子对象（要挖的路）
-     * @param {object} preGrid   前一个格子对象，
-     *                           用于获取前进两格需要的方向
+     * @param {object} preGrid   前一个格子对象，用于获取前进两格需要的方向
      * @param {string} pathColor 路的颜色
-     * @param {object} ctx       保存当前类的上下文，
-     *                           方便使用计时器时获取上下文
+     * @param {object} ctx       保存当前类的上下文，方便使用计时器时获取上下文
      * @memberof Maze
      */
     drawPath(grid, preGrid, pathColor, ctx) {
-        var x = grid.x,
-            y = grid.y,
+        var x    = grid.x,
+            y    = grid.y,
             preX = preGrid.x,
             preY = preGrid.y;
 
@@ -619,7 +622,13 @@ class Maze {
 
         var mazeGrids = ctx.mazeGrids;
         
-        // 是出口则直接绘制后停止
+        // 链接上一个格子
+        mazeGrids[y][x].preGrid = {
+            x: preX,
+            y: preY
+        }
+
+        // 如果是出口直接绘制后停止
         if (mazeGrids[y][x].isExit) {
             ctx.fillGrid(x, y, pathColor);
             mazeGrids[y][x].isPath = true;
@@ -647,6 +656,11 @@ class Maze {
         ctx.fillGrid(fx, fy, pathColor)
         mazeGrids[fy][fx].isPath = true;
 
+        // 第二格链接到第一格
+        mazeGrids[fy][fx].preGrid = {
+            x: x,
+            y: y
+        }
 
         // 获取候选方向（第二格的）
         var directions = ctx.getValidDirections(fx, fy);
@@ -665,6 +679,27 @@ class Maze {
              setTimeout(ctx.drawPath, 0, directions[i],
                         mazeGrids[fy][fx], pathColor, ctx);
         }
+    }
+
+    /**
+     * 绘制迷宫的正确出路
+     *
+     * @param {number} x - 要绘制的格子 x 坐标
+     * @param {number} y - 要绘制的格子 y 坐标
+     * @memberof Maze
+     */
+    drawCorrectPath(x, y) {
+        // 从出口开始，从后往前找，到入口为止
+        // 利用每个子节点只有一个父节点的特性
+        this.fillGrid(x, y, '#ffe0b2');
+
+        if (x === this.entrance.x && y === this.entrance.y)
+            return;
+
+        var preX = this.mazeGrids[y][x].preGrid.x,
+            preY = this.mazeGrids[y][x].preGrid.y;
+
+        this.drawCorrectPath(preX, preY);
     }
 
     /**
@@ -1013,14 +1048,13 @@ function deviceMotionHandler(evt) {
 }
 
 // 重新开始游戏
-function restartGame() {
+function reGenMaze() {
     // 重新生成迷宫并移动小球
     maze = genMaze({
         width:     +elMazeSize.value,
         height:    +elMazeSize.value,
         gameLevel: +elGameLevel.value
     });
-    maze.startMove();
 }
 
 // 开始游戏
@@ -1028,7 +1062,10 @@ function startGame() {
     // 开始移动小球
     maze.startMove();
     
+    // 禁用开始按钮
     elStartGame.classList.add('disabled');
+    elStartGame.classList.remove('pulse');
+
     if (typeof DeviceMotionEvent === 'undefined') {
         M.toast({
             html: `<span class="red-text">
@@ -1037,7 +1074,8 @@ function startGame() {
                        请使用方向键移动小球
                      </span>
                    </span>
-                   `
+                   `,
+            displayLength: 2000
         })
     } else {
         M.toast({
@@ -1048,6 +1086,12 @@ function startGame() {
             displayLength: 2000
         })
     }
+
+    // 一定时间后显示提示按钮
+    setTimeout(() => {
+        elGameHint.classList.remove('scale-out');
+        elGameHint.classList.add('scale-in');
+    }, 5000);
 }
 
 // 生成迷宫
@@ -1059,7 +1103,25 @@ function genMaze(options) {
         motionHandler: deviceMotionHandler
     }, options);
 
+    // 启用开始按钮
+    elStartGame.classList.remove('disabled');
+    elStartGame.classList.add('pulse');
+
+    // 隐藏提示按钮
+    elGameHint.classList.remove('scale-in');
+    elGameHint.classList.add('scale-out');
+
     return new Maze(_options);
+}
+
+// 点击提示后绘制迷宫的解
+function drawHintPath() {
+    // 隐藏提示按钮
+    elGameHint.classList.remove('scale-in');
+    elGameHint.classList.add('scale-out');
+
+    // 绘制迷宫的出路
+    maze.drawCorrectPath(maze.exit.x, maze.exit.y);
 }
 
 var elMaze         = document.querySelector('#maze-map'),
@@ -1068,7 +1130,8 @@ var elMaze         = document.querySelector('#maze-map'),
     elControl      = document.querySelector('.control'),
     elStartGame    = document.querySelector('.start-game'),
     elGameLevel    = document.querySelector('.game-level'),
-    elMazeSize     = document.querySelector('.maze-size');
+    elMazeSize     = document.querySelector('.maze-size'),
+    elGameHint     = document.querySelector('.game-hint');
 
 var maze = genMaze();
 
@@ -1082,7 +1145,8 @@ elMazeSize.addEventListener('change', function() {
     });
     
     elMazeWrapper.style.width = maze.w * maze.step + 'px';
-    elMazeWrapper.style.zoom = elControl.clientWidth / (maze.w * maze.step)
+    elMazeWrapper.style.zoom = elControl.clientWidth /
+                               (maze.w * maze.step)
 });
 
 // 监听游戏难度调整
@@ -1096,4 +1160,5 @@ elGameLevel.addEventListener('change', function() {
 
 // 缩放迷宫地图以适应页面
 elMazeWrapper.style.width = maze.w * maze.step + 'px';
-elMazeWrapper.style.zoom = elControl.clientWidth / (maze.w * maze.step)
+elMazeWrapper.style.zoom = elControl.clientWidth /
+                           (maze.w * maze.step)
