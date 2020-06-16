@@ -1,7 +1,7 @@
 /**
- * 走迷宫游戏的实现. (https://github.com/knightyun/maze-game)
- * Copyright 2020 knightyun. <https://raw.githubusercontent.com/knightyun/maze-game/master/maze.js>
- * MIT License. <https://raw.githubusercontent.com/knightyun/maze-game/master/LICENSE>
+ * @file 走迷宫游戏的实现. (https://github.com/knightyun/maze-game)
+ * @copyright 2020 knightyun. <https://raw.githubusercontent.com/knightyun/maze-game/master/maze.js>
+ * @license MIT License. <https://raw.githubusercontent.com/knightyun/maze-game/master/LICENSE>
  */
 
 /**
@@ -691,6 +691,10 @@ class Maze {
     drawCorrectPath(x, y) {
         // 从出口开始，从后往前找，到入口为止
         // 利用每个子节点只有一个父节点的特性
+
+        // 标记使用提示
+        this.useHint = this.useHint || true;
+
         this.fillGrid(x, y, '#ffe0b2');
 
         if (x === this.entrance.x && y === this.entrance.y)
@@ -730,63 +734,72 @@ class Maze {
     /**
      * 实现移动控制小球
      *
-     * @param {number} x  x 轴方向的重力加速度比率，10 >= x >= -10
-     *                    值的绝对值越大，越接近重力加速度
-     * @param {number} y  y 轴方向的重力加速度比率，10 >= y >= -10
-     *                    值的绝对值越大，越接近重力加速度
+     * @param {number}  x      - x 轴方向的重力加速度比率，10 >= x >= -10
+     *                         - 值的绝对值越大，越接近重力加速度
+     * @param {number}  y      - y 轴方向的重力加速度比率，10 >= y >= -10
+     *                         - 值的绝对值越大，越接近重力加速度
+     * @param {boolean} useAcc - 是否使用重力加速度移动
      * @memberof Maze
      */
-    moveBall(x, y) {
+    moveBall(x, y, useAcc) {
         var elBall = this.elBall;
 
         // 未移动时的坐标
         var bx = this.ballX,
             by = this.ballY;
 
-        // 应用重力加速度：
-        // 每秒速度增加量等于重力加速度；
-        // 加速度的大小与倾斜角度（近似为 x，y 的值）成正比；
-        // 时间戳单位为 1/1000 秒，
-        // 重力加速度则为 G / 1000；
+        if (useAcc) {
+            // 应用重力加速度：
+            // 每秒速度增加量等于重力加速度；
+            // 加速度的大小与倾斜角度（近似为 x，y 的值）成正比；
+            // 时间戳单位为 1/1000 秒，
+            // 重力加速度则为 G / 1000；
 
-        // 不同轴方向换算后的加速度
-        var gX = (this.G / 1000) * (x / 10),
-            gY = (this.G / 1000) * (y / 10);
+            // 不同轴方向换算后的加速度
+            var gX = (this.G / 1000) * (x / 10),
+                gY = (this.G / 1000) * (y / 10);
 
-        // 当前时间戳
-        var time = Date.now();
+            // 当前时间戳
+            var time = Date.now();
 
-        // 每次调用根据时间戳确定要移动的距离
-        if (!this.time) {
+            // 每次调用根据时间戳确定要移动的距离
+            if (!this.time) {
+                this.time = time;
+            } else {
+
+                // 两次调用的时间间隔
+                var timeDur = time - this.time;
+
+                // 时间间隔阈值，超过这个值判断为小球停止后重新移动，
+                // 此时速度需要置 0
+                var timeout = 50;
+
+                // 根据重力加速度增加速度
+                if (!x || timeDur > timeout) {
+
+                    // 如果该方向没有移动，则速度置为 0
+                    this.ballSpeedX = 0;
+                } else {
+
+                    // 否则速度加上一个加速度值
+                    this.ballSpeedX += timeDur * gX;
+                }
+
+                if (!y || timeDur > timeout) {
+                    this.ballSpeedY = 0;
+                } else {
+                    this.ballSpeedY += timeDur * gY;
+                }
+            }
+
             this.time = time;
+            
         } else {
-
-            // 两次调用的时间间隔
-            var timeDur = time - this.time;
-
-            // 时间间隔阈值，超过这个值判断为小球停止后重新移动，
-            // 此时速度需要置 0
-            var timeout = 50;
-
-            // 根据重力加速度增加速度
-            if (!x || timeDur > timeout) {
-
-                // 如果该方向没有移动，则速度置为 0
-                this.ballSpeedX = 0;
-            } else {
-
-                // 否则速度加上一个加速度值
-                this.ballSpeedX += timeDur * gX;
-            }
-
-            if (!y || timeDur > timeout) {
-                this.ballSpeedY = 0;
-            } else {
-                this.ballSpeedY += timeDur * gY;
-            }
+            // 不使用加速度移动
+            // x, y 判断为各自方向上的移动速度
+            this.ballSpeedX = x;
+            this.ballSpeedY = y;
         }
-
-        this.time = time;
 
         // 移动后的坐标
         bx += this.ballSpeedX,
@@ -958,15 +971,15 @@ class Maze {
         // 停止控制小球
         window.removeEventListener('keydown',      this.keyHandler);
         window.removeEventListener('devicemotion', this.motionHandler);
-
+        
         // 信息提示
-        if (this.w === 101) {
+        if (this.w === 101 && !this.useHint) {
             // 游戏彩蛋
             var elModalTrigger = document.querySelector('.modal-trigger'),
                 elModalClose   = document.querySelector('.modal-close');
 
             $('.fireworks').fireworks({
-                sound:   true,
+                sound:   false,
                 opacity: 1,
                 width:   '80%',
                 height:  '100%'
@@ -975,7 +988,7 @@ class Maze {
             elModalTrigger.click();
 
             elModalClose.addEventListener('click', () => {
-                location.reload();
+                $('.fireworks').html('');
             });
         } else {
             // 正常提示
@@ -999,7 +1012,7 @@ function keyDownHandler(evt) {
     // w       a         s         d
     // ArrowUp ArrowLeft ArrowDown ArrowRight
 
-    // 不同方向的移动加速度比率 [0, 10]
+    // 不同方向的加速度
     var step = 5;
 
     // 阻止默认移动行为
@@ -1008,22 +1021,22 @@ function keyDownHandler(evt) {
     switch (evt.key) {
         case 'w':
         case 'ArrowUp':
-            maze.moveBall(0, -step);
+            maze.moveBall(0, -step, false);
             break;
 
         case 'a':
         case 'ArrowLeft':
-            maze.moveBall(-step, 0);
+            maze.moveBall(-step, 0, false);
             break;
 
         case 's':
         case 'ArrowDown':
-            maze.moveBall(0, step);
+            maze.moveBall(0, step, false);
             break;
 
         case 'd':
         case 'ArrowRight':
-            maze.moveBall(step, 0);
+            maze.moveBall(step, 0, false);
             break;
 
         default:
@@ -1044,7 +1057,7 @@ function deviceMotionHandler(evt) {
     var ax = -acc.x,
         ay = acc.y;
 
-    maze.moveBall(ax, ay);
+    maze.moveBall(ax, ay, true);
 }
 
 // 重新开始游戏
