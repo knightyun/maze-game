@@ -15,9 +15,11 @@
 <body class="teal lighten-4">
   <div class="container center-align">
     <div class="row"></div>
+    <!-- Github buttons -->
     <div class="row right-align">
       <a href="https://github.com/knightyun/maze-game">
         <img alt="" src="https://img.shields.io/github/stars/knightyun/maze-game?style=social">
+        <img alt="" src="https://img.shields.io/github/forks/knightyun/maze-game?style=social">
       </a>
     </div>
     <!-- 迷宫模块 -->
@@ -117,20 +119,19 @@
   </div>
 
   <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script> -->
-    <script src="./js/materialize.min.js"></script>
+  <script src="./js/materialize.min.js"></script>
   <script>
     M.AutoInit();
     document.addEventListener('DOMContentLoaded', function () {
-      var elems = document.querySelectorAll('.modal');
-      var instances = M.Modal.init(elems, {
-        endingTop: '0'
-      });
+      var elms = document.querySelectorAll('.modal');
+      var instances = M.Modal.init(elms, { endingTop: '0' });
     });
   </script>
   <!-- <script src="http://code.jquery.com/jquery-1.12.4.min.js"
   integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script> -->
   <script src="./js/jquery.min.js"></script>
   <script src="./js/jquery.fireworks.min.js"></script>
+  <!-- <script src="./js/maze.js"></script> -->
   <script src="./js/maze.min.js"></script>
 </body>
 

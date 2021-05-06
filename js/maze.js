@@ -20,32 +20,33 @@ class Maze {
      * @param {number}   [options.height=31]   - 迷宫高度（格数）
      * @param {number}   [options.step=10]     - 单元格大小
      * @param {number}   [options.gameLevel=0] - 游戏难度等级
-     * @param {function} options.keyHandler    - 键盘控制移动回调函数
-     * @param {function} options.motionHandler - 手机控制移动回调函数
      * @memberof Maze
      */
     constructor(options) {
-        this.elMaze        = options.elMaze;
-        this.elBall        = options.elBall;
-        this.w             = options.width     || 31;
-        this.h             = options.height    || 31;
-        this.step          = options.step      || 10;
-        this.ballDia       = options.ballDia   || 6;
-        this.gameLevel     = options.gameLevel || 0;
-        this.keyHandler    = options.keyHandler;
-        this.motionHandler = options.motionHandler;
+        this.elMaze = options.elMaze;
+        this.elBall = options.elBall;
+        this.w = options.width || 31;
+        this.h = options.height || 31;
+        this.step = options.step || 10;
+        this.ballDia = options.ballDia || 6;
+        this.gameLevel = options.gameLevel || 0;
+        this.keyDownHandler = this.keyDownHandler.bind(this);
+        this.keyUpHandler = this.keyUpHandler.bind(this);
+        this.motionHandler = this.motionHandler.bind(this);
 
-        this.ballSpeedX = 0;    // 小球 x 轴方向的移动速度；
-        this.ballSpeedY = 0;    // 小球 y 轴方向的移动速度；
-        this.G          = 9.8;  // 重力加速度
-        this.time       = null; // 时间戳，用于设置重力加速度
-        
+        this.ballSpeedX = 0; // 小球 x 轴方向的移动速度；
+        this.ballSpeedY = 0; // 小球 y 轴方向的移动速度；
+        this.G = 9.8; // 重力加速度
+        this.time = null; // 时间戳，用于设置重力加速度
+        this.curKey = ''; // 当前按键控制的方向 'up' | 'left' | 'right' | 'down'
+        this.int = null; // 按键后触发的 setInterval 的返回值
+
         // 游戏难度等级：简单 -> 困难 -> 复杂
         //   0 - 简单：随机返回一个候选方向；
         //   1 - 复杂：随机返回两个候选方向；（难度最大）
         //   2 - 困难：随机返回三个候选方向；（全部）
 
-        this.cvsCtx = this.elMaze.getContext('2d');
+        this.cvsCtx = this.elMaze.getContext("2d");
 
         // 包含所有格子的二维数组
         this.mazeGrids = [];
@@ -53,14 +54,14 @@ class Maze {
         // 入口位置
         this.entrance = {
             x: 1,
-            y: 0
-        }
+            y: 0,
+        };
 
         // 出口位置
         this.exit = {
             x: this.w - 2,
-            y: this.h - 1
-        }
+            y: this.h - 1,
+        };
 
         this.initMaze();
     }
@@ -86,47 +87,43 @@ class Maze {
         elMaze.height = h * step;
 
         // 移除移动操作监听
-        window.removeEventListener('keydown',      this.keyHandler);
+        window.removeEventListener('keydown', this.keyDownHandler);
+        window.removeEventListener('keyup', this.keyUpHandler);
         window.removeEventListener('devicemotion', this.motionHandler);
 
         // 绘画初始迷宫，包括围墙，出入口，
         // 并初始化每个单元格的信息
         for (var y = 0; y < h; y++) {
-
             mazeGrids[y] = [];
 
             for (var x = 0; x < w; x++) {
-
                 // 每个单元格的信息，包括坐标，是否为墙，是否为路
                 mazeGrids[y][x] = {
                     // 格子坐标
                     x: x,
                     y: y,
                     // 判断是否是围墙
-                    isWall: (x === 0     || y === 0    ||
-                             x === w - 1 || y === h - 1),
+                    isWall: x === 0 || y === 0 || x === w - 1 || y === h - 1,
                     // 是否为入口
-                    isEntrance: x === entrance.x &&
-                                y === entrance.y,
+                    isEntrance: x === entrance.x && y === entrance.y,
                     // 是否为出口
-                    isExit: x === exit.x &&
-                            y === exit.y,
+                    isExit: x === exit.x && y === exit.y,
                     // 判断是否为路：后期画路时置为 true
                     isPath: false,
                     // 链接上一个格子，用于搜索迷宫的解
-                    preGrid: null
-                }
+                    preGrid: null,
+                };
             }
         }
 
         // 画墙和出入口
-        this.drawWall('#004d40', 'white');
+        this.drawWall("#004d40", "white");
 
         // 内部墙的颜色
-        elMaze.style.background = '#4D4040';
+        elMaze.style.background = "#4D4040";
 
         // 挖路
-        this.drawPath(entrance, { x: 1, y: -1 }, '#e0f2f1');
+        this.drawPath(entrance, { x: 1, y: -1 }, "#e0f2f1");
 
         // 画小球
         this.drawBall(elBall, ballDia);
@@ -135,27 +132,26 @@ class Maze {
     /**
      * 封装的画格子方法
      *
-     * @param {number} x 左上角的 x 坐标
-     * @param {number} y 左上角的 y 坐标
-     * @param {string} color 格子颜色
+     * @param {number} x     - 左上角的 x 坐标
+     * @param {number} y     - 左上角的 y 坐标
+     * @param {string} color - 格子颜色
      * @memberof Maze
      */
     fillGrid(x, y, color) {
         var ctx = this.cvsCtx;
 
         ctx.fillStyle = color;
-        ctx.fillRect(x * this.step, y * this.step,
-            this.step, this.step);
+        ctx.fillRect(x * this.step, y * this.step, this.step, this.step);
     }
 
     /**
      * 获取当前格子的“前面”一个格子（相对）
      *
-     * @param   {number} x1 前一个格子的 x 坐标
-     * @param   {number} y1 前一个格子的 y 坐标
-     * @param   {number} x2 当前格子的 x 坐标
-     * @param   {number} y2 当前格子的 y 坐标
-     * @returns {object}    迷宫格子对象
+     * @param   {number} x1 - 前一个格子的 x 坐标
+     * @param   {number} y1 - 前一个格子的 y 坐标
+     * @param   {number} x2 - 当前格子的 x 坐标
+     * @param   {number} y2 - 当前格子的 y 坐标
+     * @returns {object}    - 迷宫格子对象
      * @memberof Maze
      */
     getFrontGrid(x1, y1, x2, y2) {
@@ -163,8 +159,7 @@ class Maze {
             y = 2 * y2 - y1;
 
         // 判断该格子是否存在；
-        var isExist = !!this.mazeGrids[y] &&
-            !!this.mazeGrids[y][x];
+        var isExist = !!this.mazeGrids[y] && !!this.mazeGrids[y][x];
 
         return isExist ? this.mazeGrids[y][x] : null;
     }
@@ -172,11 +167,11 @@ class Maze {
     /**
      * 获取当前格子的左前方一个格子（相对）
      *
-     * @param   {number} x1 前一个格子的 x 坐标
-     * @param   {number} y1 前一个格子的 y 坐标
-     * @param   {number} x2 当前格子的 x 坐标
-     * @param   {number} y2 当前格子的 y 坐标
-     * @returns {object}    迷宫格子对象
+     * @param   {number} x1 - 前一个格子的 x 坐标
+     * @param   {number} y1 - 前一个格子的 y 坐标
+     * @param   {number} x2 - 当前格子的 x 坐标
+     * @param   {number} y2 - 当前格子的 y 坐标
+     * @returns {object}    - 迷宫格子对象
      * @memberof Maze
      */
     getFrontLeftGrid(x1, y1, x2, y2) {
@@ -186,22 +181,17 @@ class Maze {
 
         // 再判断左前方
         if (x2 - x1 === 0) {
-            if (y2 - y1 > 0)
-                x += 1;
-            else
-                x -= 1;
+            if (y2 - y1 > 0) x += 1;
+            else x -= 1;
         }
 
         if (y2 - y1 === 0) {
-            if (x2 - x1 > 0)
-                y -= 1;
-            else
-                y += 1;
+            if (x2 - x1 > 0) y -= 1;
+            else y += 1;
         }
 
         // 判断该格子是否存在；
-        var isExist = !!this.mazeGrids[y] &&
-            !!this.mazeGrids[y][x];
+        var isExist = !!this.mazeGrids[y] && !!this.mazeGrids[y][x];
 
         return isExist ? this.mazeGrids[y][x] : null;
     }
@@ -209,11 +199,11 @@ class Maze {
     /**
      * 获取当前格子的右前方一个格子（相对）
      *
-     * @param   {number} x1 前一个格子的 x 坐标
-     * @param   {number} y1 前一个格子的 y 坐标
-     * @param   {number} x2 当前格子的 x 坐标
-     * @param   {number} y2 当前格子的 y 坐标
-     * @returns {object}    迷宫格子对象
+     * @param   {number} x1 - 前一个格子的 x 坐标
+     * @param   {number} y1 - 前一个格子的 y 坐标
+     * @param   {number} x2 - 当前格子的 x 坐标
+     * @param   {number} y2 - 当前格子的 y 坐标
+     * @returns {object}    - 迷宫格子对象
      * @memberof Maze
      */
     getFrontRightGrid(x1, y1, x2, y2) {
@@ -223,22 +213,17 @@ class Maze {
 
         // 再判断右前方
         if (x2 - x1 === 0) {
-            if (y2 - y1 > 0)
-                x -= 1;
-            else
-                x += 1;
+            if (y2 - y1 > 0) x -= 1;
+            else x += 1;
         }
 
         if (y2 - y1 === 0) {
-            if (x2 - x1 > 0)
-                y += 1;
-            else
-                y -= 1;
+            if (x2 - x1 > 0) y += 1;
+            else y -= 1;
         }
 
         // 判断该格子是否存在；
-        var isExist = !!this.mazeGrids[y] &&
-            !!this.mazeGrids[y][x];
+        var isExist = !!this.mazeGrids[y] && !!this.mazeGrids[y][x];
 
         return isExist ? this.mazeGrids[y][x] : null;
     }
@@ -246,9 +231,9 @@ class Maze {
     /**
      * 获取当前格子的所有有效候选方向
      *
-     * @param   {*} x   当前格子 x 坐标
-     * @param   {*} y   当前格子 y 坐标
-     * @returns {Array} 有效的候选方向（格子对象）
+     * @param   {*} x   - 当前格子 x 坐标
+     * @param   {*} y   - 当前格子 y 坐标
+     * @returns {Array} - 有效的候选方向（格子对象）
      * @memberof Maze
      */
     getValidDirections(x, y) {
@@ -257,7 +242,7 @@ class Maze {
         // 无效方向：
         //   格子为围墙；
         //   格子前面是路；
-        // 如果领居数为 0，则寻路结束； 
+        // 如果领居数为 0，则寻路结束；
 
         var mazeGrids = this.mazeGrids,
             directions = [];
@@ -265,26 +250,25 @@ class Maze {
         // 4 个方向
         var top = {
                 x: x,
-                y: y - 1
+                y: y - 1,
             },
             bottom = {
                 x: x,
-                y: y + 1
+                y: y + 1,
             },
             left = {
                 x: x - 1,
-                y: y
+                y: y,
             },
             right = {
                 x: x + 1,
-                y: y
-            }
+                y: y,
+            };
 
         directions.push(top, bottom, left, right);
 
         // 过滤掉无效方向
-        directions = directions.filter(item => {
-
+        directions = directions.filter((item) => {
             // 候选方向的 x, y 坐标
             var _x = item.x,
                 _y = item.y;
@@ -321,16 +305,15 @@ class Maze {
             isPath = mazeGrids[_y][_x].isPath;
             isFrontPath = this.getFrontGrid(x, y, _x, _y).isPath;
 
-            isValidDirection = isExit || !isWall && !isPath && !isFrontPath;
-
+            isValidDirection = isExit || (!isWall && !isPath && !isFrontPath);
 
             return isValidDirection;
         });
 
         // 转换为迷宫格子对象
-        directions = directions.map(item => {
+        directions = directions.map((item) => {
             return mazeGrids[item.y][item.x];
-        })
+        });
 
         return directions;
     }
@@ -338,14 +321,14 @@ class Maze {
     /**
      * 判断第三个格子相对于第二个格子的方位
      *
-     * @param   {object} grid1 格子对象
-     * @param   {object} grid2 格子对象
-     * @param   {object} grid2 格子对象
-     * @returns {string='front'|'left'|'right'} 方位 
+     * @param   {object} grid1                  - 格子对象
+     * @param   {object} grid2                  - 格子对象
+     * @param   {object} grid2                  - 格子对象
+     * @returns {string='front'|'left'|'right'} - 方位
      * @memberof Maze
      */
     getDirection(grid1, grid2, grid3) {
-        var directions = ['front', 'left', 'right'];
+        var directions = ["front", "left", "right"];
 
         var x1 = grid1.x,
             y1 = grid1.y,
@@ -356,8 +339,7 @@ class Maze {
 
         var isFront, isLeft, isRight;
 
-        isFront = (x3 - x2 === x2 - x1) ||
-            (y3 - y2 === y2 - y1);
+        isFront = x3 - x2 === x2 - x1 || y3 - y2 === y2 - y1;
 
         if (y2 === y1) {
             if (x2 > x1) {
@@ -387,16 +369,16 @@ class Maze {
     /**
      * 随机返回一个候选方向
      *
-     * @param   {Array} directions 包含候选方向的数组
-     * @returns {object[]}         一个包含随机的候选方向的数组
+     * @param   {Array} directions - 包含候选方向的数组
+     * @returns {object[]}         - 一个包含随机的候选方向的数组
      * @memberof Maze
      */
     getRandomDirection(directions) {
         var results = [];
-        
+
         // 打乱数组
-        directions.sort(() => (0.5 - Math.random()));
-        
+        directions.sort(() => 0.5 - Math.random());
+
         // 根据游戏难度返回候选方向
         //   gameLevel = 0：一条；
         //   gameLevel = 1：两条；
@@ -416,7 +398,7 @@ class Maze {
             // 如果候选方向个数少于相应游戏难度的，
             // 则直接中断
             if (!directions[i]) break;
-            
+
             // 如果当前概率大于最大概率，
             // 则只返回第一个候选方向
             if (i > 0 && ratio > maxRatio) break;
@@ -430,10 +412,10 @@ class Maze {
     /**
      * 处理当前格子下一步路径分叉的问题
      *
-     * @param   {object}   grid1      前一个格子对象
-     * @param   {object}   grid2      当前格子对象
-     * @param   {object[]} directions 候选方向的格子对象
-     * @returns {object[]}            返回确定要挖的格子对象
+     * @param   {object}   grid1      - 前一个格子对象
+     * @param   {object}   grid2      - 当前格子对象
+     * @param   {object[]} directions - 候选方向的格子对象
+     * @returns {object[]}            - 返回确定要挖的格子对象
      * @memberof Maze
      */
     forkPath(grid1, grid2, directions) {
@@ -448,17 +430,14 @@ class Maze {
         // 左右前方的前方其中一个为路时，只能挖前方和左或右；
         // 以上情况都不是，则使用随机选择；
 
-        var isFrontWall,
-            isFrontPath,
-            isFrontLeftPath,
-            isFrontRightPath;
+        var isFrontWall, isFrontPath, isFrontLeftPath, isFrontRightPath;
 
         // 标记每个候选方向的方位
         var _directions = {
             front: null,
             left: null,
-            right: null
-        }
+            right: null,
+        };
 
         // 处理随机获取候选方向的东西情况
         var randomDirections = [],
@@ -468,99 +447,107 @@ class Maze {
         var returnDirections = [];
 
         // 遍历判断 directions 的方位
-        directions.forEach(grid => {
+        directions.forEach((grid) => {
             var direction = this.getDirection(grid1, grid2, grid);
 
             _directions[direction] = grid;
-        })
-
+        });
 
         // 现获取前面的格子
         // 前面一定存在有效格子
         // 不存在是路的情况
         // 如果是围墙直接返回全部方向，不用继续判断
-        var frontGrid = this.getFrontGrid(grid1.x, grid1.y,
-            grid2.x, grid2.y);
+        var frontGrid = this.getFrontGrid(grid1.x, grid1.y, grid2.x, grid2.y);
         isFrontWall = frontGrid.isWall;
 
         if (isFrontWall) return directions;
-
 
         // 获取前面的前面的格子
         // 此时前面的前面也一定存在有效格子
         // 不存在是围墙的情况
         // 如果是路直接返回全部对象，不判断左右
-        var frontFrontGrid = this.getFrontGrid(grid2.x, grid2.y,
-            frontGrid.x, frontGrid.y);
+        var frontFrontGrid = this.getFrontGrid(
+            grid2.x,
+            grid2.y,
+            frontGrid.x,
+            frontGrid.y
+        );
         isFrontPath = frontFrontGrid.isPath;
 
         if (isFrontPath) return directions;
 
-
         // 此时前方的前方不是路，也不会是围墙，
         // 只会是待挖的路，所以需要返回 front 方位的候选方向
         // 并考虑获取随机方向的情况
-        returnDirections.push(_directions['front']);
-        randomDirections.push(_directions['front']);
-
+        returnDirections.push(_directions["front"]);
+        randomDirections.push(_directions["front"]);
 
         // 获取左前方的左前方的格子
         // 左前方一定存在有效格子
-        var frontLeftGrid = this.getFrontLeftGrid(grid1.x, grid1.y,
-            grid2.x, grid2.y);
-        if (!frontLeftGrid.isWall && !!_directions['left']) {
+        var frontLeftGrid = this.getFrontLeftGrid(
+            grid1.x,
+            grid1.y,
+            grid2.x,
+            grid2.y
+        );
+        if (!frontLeftGrid.isWall && !!_directions["left"]) {
             // 如果左前方是围墙，或者左边没有候选方向，
             // 则跳过；
 
             // 否则继续判断左前方的左前方
             // 此时左前方的左前方一定不会是围墙
-            var frontFrontLeftGrid = this.getFrontLeftGrid(grid2.x, grid2.y,
-                frontLeftGrid.x, frontLeftGrid.y);
+            var frontFrontLeftGrid = this.getFrontLeftGrid(
+                grid2.x,
+                grid2.y,
+                frontLeftGrid.x,
+                frontLeftGrid.y
+            );
 
             if (frontFrontLeftGrid.isPath) {
-
                 // 如果是路，则需要返回 left 方位的候选方向
-                returnDirections.push(_directions['left']);
+                returnDirections.push(_directions["left"]);
                 isFrontLeftPath = true;
             } else {
-
                 // 如果不是，就要考虑随机选择 front, left
-                randomDirections.push(_directions['left']);
+                randomDirections.push(_directions["left"]);
                 isFrontLeftPath = false;
             }
         } else {
-
             // 标记为不是路，方便处理另外两个方向可能出现随机的情况
             isFrontLeftPath = false;
         }
 
-
         // 获取右前方的左前方的格子
         // 右前方一定存在有效格子
-        var frontRightGrid = this.getFrontRightGrid(grid1.x, grid1.y,
-            grid2.x, grid2.y);
-        if (!frontRightGrid.isWall && !!_directions['right']) {
+        var frontRightGrid = this.getFrontRightGrid(
+            grid1.x,
+            grid1.y,
+            grid2.x,
+            grid2.y
+        );
+        if (!frontRightGrid.isWall && !!_directions["right"]) {
             // 如果右前方也是墙（很难出现）且存在右侧候选方向，
             // 则跳过
 
             // 否则继续判断右前方的左前方
             // 此时右前方的右前方一定不会是围墙
-            var frontFrontRightGrid = this.getFrontRightGrid(grid2.x, grid2.y,
-                frontRightGrid.x, frontRightGrid.y);
+            var frontFrontRightGrid = this.getFrontRightGrid(
+                grid2.x,
+                grid2.y,
+                frontRightGrid.x,
+                frontRightGrid.y
+            );
 
             if (frontFrontRightGrid.isPath) {
-
                 // 如果也是路，则需要返回 right 方位的候选方向
-                returnDirections.push(_directions['right']);
+                returnDirections.push(_directions["right"]);
                 isFrontRightPath = true;
             } else {
-
                 // 如果不是，就要考虑随机选择 front, right
                 // 如果 left 方位也要考虑随机，则随机选择 front, left, right
-                randomDirections.push(_directions['right']);
+                randomDirections.push(_directions["right"]);
                 isFrontRightPath = false;
             }
-
         } else {
             isFrontRightPath = false;
         }
@@ -572,67 +559,61 @@ class Maze {
         // 否则返回全部方向
         flagRandom = !isFrontLeftPath && !isFrontRightPath;
 
-        if (flagRandom)
-            return this.getRandomDirection(randomDirections);
-        else
-            return returnDirections;
+        if (flagRandom) return this.getRandomDirection(randomDirections);
+        else return returnDirections;
     }
 
     /**
      * 绘画四周的围墙，以及出入口
      *
-     * @param {string} wallColor   围墙的颜色
-     * @param {string} tunnelColor 出入口的颜色
+     * @param {string} wallColor   - 围墙的颜色
+     * @param {string} tunnelColor - 出入口的颜色
      * @memberof Maze
      */
     drawWall(wallColor, tunnelColor) {
-        this.mazeGrids.forEach(y => {
-            y.forEach(x => {
-
+        this.mazeGrids.forEach((y) => {
+            y.forEach((x) => {
                 // 画墙
-                x.isWall &&
-                    this.fillGrid(x.x, x.y, wallColor);
+                x.isWall && this.fillGrid(x.x, x.y, wallColor);
 
                 // 画出入口
-                x.isEntrance &&
-                    this.fillGrid(x.x, x.y, tunnelColor);
-                x.isExit &&
-                    this.fillGrid(x.x, x.y, tunnelColor);
-            })
-        })
+                x.isEntrance && this.fillGrid(x.x, x.y, tunnelColor);
+                x.isExit && this.fillGrid(x.x, x.y, tunnelColor);
+            });
+        });
     }
 
     /**
      * 挖路实现函数，递归地绘制有效路径
      * 从 this.start 开始，到无路后结束
      *
-     * @param {object} grid      当前格子对象（要挖的路）
-     * @param {object} preGrid   前一个格子对象，用于获取前进两格需要的方向
-     * @param {string} pathColor 路的颜色
-     * @param {object} ctx       保存当前类的上下文，方便使用计时器时获取上下文
+     * @param {object} grid      - 当前格子对象（要挖的路）
+     * @param {object} preGrid   - 前一个格子对象，用于获取前进两格需要的方向
+     * @param {string} pathColor - 路的颜色
+     * @param {object} ctx       - 保存当前类的上下文，方便使用计时器时获取上下文
      * @memberof Maze
      */
     drawPath(grid, preGrid, pathColor, ctx) {
-        var x    = grid.x,
-            y    = grid.y,
+        var x = grid.x,
+            y = grid.y,
             preX = preGrid.x,
             preY = preGrid.y;
 
         ctx = ctx || this;
 
         var mazeGrids = ctx.mazeGrids;
-        
+
         // 链接上一个格子
         mazeGrids[y][x].preGrid = {
             x: preX,
-            y: preY
-        }
+            y: preY,
+        };
 
         // 如果是出口直接绘制后停止
         if (mazeGrids[y][x].isExit) {
             ctx.fillGrid(x, y, pathColor);
             mazeGrids[y][x].isPath = true;
-            
+
             return;
         }
 
@@ -640,27 +621,26 @@ class Maze {
         var frontGrid = ctx.getFrontGrid(preX, preY, x, y);
         var fx = frontGrid.x,
             fy = frontGrid.y;
-        
+
         // 先判断当前绘制的路是否有效：
         //   当前格子不是路；
         //   当前格子前面不是路；
         // 无效直接返回
-        if (mazeGrids[y][x].isPath || mazeGrids[fy][fx].isPath)
-            return;
+        if (mazeGrids[y][x].isPath || mazeGrids[fy][fx].isPath) return;
 
         // 绘制路（第一格）
         ctx.fillGrid(x, y, pathColor);
         mazeGrids[y][x].isPath = true;
 
         // 画同方向第二格路
-        ctx.fillGrid(fx, fy, pathColor)
+        ctx.fillGrid(fx, fy, pathColor);
         mazeGrids[fy][fx].isPath = true;
 
         // 第二格链接到第一格
         mazeGrids[fy][fx].preGrid = {
             x: x,
-            y: y
-        }
+            y: y,
+        };
 
         // 获取候选方向（第二格的）
         var directions = ctx.getValidDirections(fx, fy);
@@ -668,16 +648,20 @@ class Maze {
         // 递归挖路结束
         if (directions.length === 0) return;
 
-
         // 处理分叉情况，获取最终要挖的所有方向
         directions = ctx.forkPath(grid, frontGrid, directions);
 
         for (let i = 0; i < directions.length; i++) {
-            
             // 使用计时器可以利用事件队列的特性，同时挖多个候选方向
             // 使用同步方式递归会导致一条路挖到头，剩下候选方向无效
-             setTimeout(ctx.drawPath, 0, directions[i],
-                        mazeGrids[fy][fx], pathColor, ctx);
+            setTimeout(
+                ctx.drawPath,
+                0,
+                directions[i],
+                mazeGrids[fy][fx],
+                pathColor,
+                ctx
+            );
         }
     }
 
@@ -695,10 +679,9 @@ class Maze {
         // 标记使用提示
         this.useHint = this.useHint || true;
 
-        this.fillGrid(x, y, '#ffe0b2');
+        this.fillGrid(x, y, "#ffe0b2");
 
-        if (x === this.entrance.x && y === this.entrance.y)
-            return;
+        if (x === this.entrance.x && y === this.entrance.y) return;
 
         var preX = this.mazeGrids[y][x].preGrid.x,
             preY = this.mazeGrids[y][x].preGrid.y;
@@ -709,26 +692,24 @@ class Maze {
     /**
      * 画出走迷宫的小球
      *
-     * @param {Element} elBall 用于绘制小球的元素
-     * @param {number}  d      小球的直径
+     * @param {Element} elBall - 用于绘制小球的元素
+     * @param {number}  d      - 小球的直径
      * @memberof Maze
      */
     drawBall(elBall, d) {
-
         // 初始化小球坐标
         this.ballX = this.entrance.x * this.step;
         this.ballY = this.entrance.y * this.step;
-        
+
         // debug
         // this.ballX = this.exit.x * this.step;
         // this.ballY = (this.exit.y - 1) * this.step;
 
         // 初始化位置、大小、颜色
-        elBall.style.width  = d + 'px';
-        elBall.style.height = d + 'px';
-        elBall.style.left   = this.ballX + 'px';
-        elBall.style.top    = this.ballY + 'px';
-
+        elBall.style.width = d + "px";
+        elBall.style.height = d + "px";
+        elBall.style.left = this.ballX + "px";
+        elBall.style.top = this.ballY + "px";
     }
 
     /**
@@ -766,7 +747,6 @@ class Maze {
             if (!this.time) {
                 this.time = time;
             } else {
-
                 // 两次调用的时间间隔
                 var timeDur = time - this.time;
 
@@ -776,11 +756,9 @@ class Maze {
 
                 // 根据重力加速度增加速度
                 if (!x || timeDur > timeout) {
-
                     // 如果该方向没有移动，则速度置为 0
                     this.ballSpeedX = 0;
                 } else {
-
                     // 否则速度加上一个加速度值
                     this.ballSpeedX += timeDur * gX;
                 }
@@ -793,7 +771,6 @@ class Maze {
             }
 
             this.time = time;
-            
         } else {
             // 不使用加速度移动
             // x, y 判断为各自方向上的移动速度
@@ -802,8 +779,7 @@ class Maze {
         }
 
         // 移动后的坐标
-        bx += this.ballSpeedX,
-        by += this.ballSpeedY;
+        (bx += this.ballSpeedX), (by += this.ballSpeedY);
 
         // 把小球变换后的坐标限制在路内（防止穿墙）
         var validPos = this.getBallValidPosition(bx, by);
@@ -813,31 +789,32 @@ class Maze {
         this.ballY = validPos.y;
 
         // 判断是否到达出口
-        if (this.ballX >= (this.exit.x * this.step) &&
-            this.ballY >= (this.exit.y * this.step)) {
+        if (
+            this.ballX >= this.exit.x * this.step &&
+            this.ballY >= this.exit.y * this.step
+        ) {
             this.arriveExit();
         }
         // 移动小球
-        elBall.style.left = this.ballX + 'px';
-        elBall.style.top  = this.ballY + 'px';
+        elBall.style.left = this.ballX + "px";
+        elBall.style.top = this.ballY + "px";
     }
 
     /**
      * 限制小球移动范围，返回限制后的有效坐标
      *
-     * @param   {number} x   变换后的小球 x 坐标
-     * @param   {number} y   变换后的小球 y 坐标
-     * @returns {object}     限制后的 x，y 坐标
+     * @param   {number} x - 变换后的小球 x 坐标
+     * @param   {number} y - 变换后的小球 y 坐标
+     * @returns {object}   - 限制后的 x，y 坐标
      * @memberof Maze
      */
     getBallValidPosition(x, y) {
-
         // 限制小球在迷宫范围内
-        if (x <= 0) x = 0, this.ballSpeedX = 0;
+        if (x <= 0) (x = 0), (this.ballSpeedX = 0);
         if (y <= 0) y = 0;
 
         if (x >= this.w * this.step - this.ballDia)
-            x = this.w * this.step - this.ballDia, this.ballSpeedX = 0;
+            (x = this.w * this.step - this.ballDia), (this.ballSpeedX = 0);
 
         if (y >= this.h * this.step - this.ballDia)
             y = this.h * this.step - this.ballDia;
@@ -847,20 +824,20 @@ class Maze {
         // 刚好接触墙判断为路
         var leftTop = {
                 x: ~~(x / this.step),
-                y: ~~(y / this.step)
+                y: ~~(y / this.step),
             },
             leftBottom = {
                 x: ~~(x / this.step),
-                y: ~~((y + this.ballDia) / this.step)
+                y: ~~((y + this.ballDia) / this.step),
             },
             rightTop = {
                 x: ~~((x + this.ballDia) / this.step),
-                y: ~~(y / this.step)
+                y: ~~(y / this.step),
             },
             rightBottom = {
                 x: ~~((x + this.ballDia) / this.step),
-                y: ~~((y + this.ballDia) / this.step)
-            }
+                y: ~~((y + this.ballDia) / this.step),
+            };
 
         // 判断每个角对应的迷宫格子是否是路
         // 格子不存在就视作墙
@@ -870,7 +847,8 @@ class Maze {
             var x = grid.x,
                 y = grid.y;
 
-            var isPath = that.mazeGrids[y] &&
+            var isPath =
+                that.mazeGrids[y] &&
                 that.mazeGrids[y][x] &&
                 that.mazeGrids[y][x].isPath;
 
@@ -884,69 +862,89 @@ class Maze {
 
         // 1. 一个角穿墙，向坐标值更大的一个轴方向移动
         // 1.1. 左上角
-        if (!isGridPath(leftTop) && isGridPath(leftBottom) &&
-            isGridPath(rightTop) && isGridPath(rightBottom)) {
-
+        if (
+            !isGridPath(leftTop) &&
+            isGridPath(leftBottom) &&
+            isGridPath(rightTop) &&
+            isGridPath(rightBottom)
+        ) {
             // 向左穿墙
-            if (x - leftTop.x * this.step >
-                y - leftTop.y * this.step)
-                x = (leftTop.x + 1) * this.step, this.ballSpeedX = 0;
+            if (x - leftTop.x * this.step > y - leftTop.y * this.step)
+                (x = (leftTop.x + 1) * this.step), (this.ballSpeedX = 0);
             // 向上穿墙
-            else
-                y = (leftTop.y + 1) * this.step, this.ballSpeedY = 0;
+            else (y = (leftTop.y + 1) * this.step), (this.ballSpeedY = 0);
         }
         // 1.2. 左下角
-        if (!isGridPath(leftBottom) && isGridPath(leftTop) &&
-            isGridPath(rightBottom) && isGridPath(rightTop)) {
-
+        if (
+            !isGridPath(leftBottom) &&
+            isGridPath(leftTop) &&
+            isGridPath(rightBottom) &&
+            isGridPath(rightTop)
+        ) {
             // 向左穿墙
-            if ((leftBottom.x + 1) * this.step - x <
-                y + this.ballDia - leftBottom.y * this.step)
-                x = (leftBottom.x + 1) * this.step, this.ballSpeedX = 0;
+            if (
+                (leftBottom.x + 1) * this.step - x <
+                y + this.ballDia - leftBottom.y * this.step
+            )
+                (x = (leftBottom.x + 1) * this.step), (this.ballSpeedX = 0);
             // 向下穿墙
             else
-                y = leftBottom.y * this.step - this.ballDia, this.ballSpeedY = 0;
+                (y = leftBottom.y * this.step - this.ballDia),
+                    (this.ballSpeedY = 0);
         }
         // 1.3. 右下角
-        if (!isGridPath(rightBottom) && isGridPath(rightTop) &&
-            isGridPath(leftBottom) && isGridPath(leftTop)) {
-
+        if (
+            !isGridPath(rightBottom) &&
+            isGridPath(rightTop) &&
+            isGridPath(leftBottom) &&
+            isGridPath(leftTop)
+        ) {
             // 向右穿墙
-            if (y + this.ballDia - rightBottom.y * this.step >
-                x + this.ballDia - rightBottom.x * this.step)
-                x = rightBottom.x * this.step - this.ballDia, this.ballSpeedX = 0;
+            if (
+                y + this.ballDia - rightBottom.y * this.step >
+                x + this.ballDia - rightBottom.x * this.step
+            )
+                (x = rightBottom.x * this.step - this.ballDia),
+                    (this.ballSpeedX = 0);
             // 向下穿墙
             else
-                y = rightBottom.y * this.step - this.ballDia, this.ballSpeedY = 0;
+                (y = rightBottom.y * this.step - this.ballDia),
+                    (this.ballSpeedY = 0);
         }
         // 1.4. 右上角
-        if (!isGridPath(rightTop) && isGridPath(rightBottom) &&
-            isGridPath(leftTop) && isGridPath(leftBottom)) {
-
+        if (
+            !isGridPath(rightTop) &&
+            isGridPath(rightBottom) &&
+            isGridPath(leftTop) &&
+            isGridPath(leftBottom)
+        ) {
             // 向右穿墙
-            if ((rightTop.y + 1) * this.step - y >
-                x + this.ballDia - rightTop.x * this.step)
-                x = rightTop.x * this.step - this.ballDia, this.ballSpeedX = 0;
+            if (
+                (rightTop.y + 1) * this.step - y >
+                x + this.ballDia - rightTop.x * this.step
+            )
+                (x = rightTop.x * this.step - this.ballDia),
+                    (this.ballSpeedX = 0);
             // 向上穿墙
-            else
-                y = (rightTop.y + 1) * this.step, this.ballSpeedY = 0;
+            else (y = (rightTop.y + 1) * this.step), (this.ballSpeedY = 0);
         }
 
         // 2. 同侧两个角穿墙
         // 2.1. 左侧
         if (!isGridPath(leftTop) && !isGridPath(leftBottom))
-            x = (leftTop.x + 1) * this.step, this.ballSpeedX = 0;
+            (x = (leftTop.x + 1) * this.step), (this.ballSpeedX = 0);
         // 2.2. 下侧
         if (!isGridPath(leftBottom) && !isGridPath(rightBottom))
-            y = leftBottom.y * this.step - this.ballDia, this.ballSpeedY = 0;
+            (y = leftBottom.y * this.step - this.ballDia),
+                (this.ballSpeedY = 0);
         // 2.3. 右侧
         if (!isGridPath(rightTop) && !isGridPath(rightBottom))
-            x = rightTop.x * this.step - this.ballDia, this.ballSpeedX = 0;
+            (x = rightTop.x * this.step - this.ballDia), (this.ballSpeedX = 0);
         // 2.4. 上侧
         if (!isGridPath(leftTop) && !isGridPath(rightTop))
-            y = (leftTop.y + 1) * this.step, this.ballSpeedY = 0;
+            (y = (leftTop.y + 1) * this.step), (this.ballSpeedY = 0);
 
-        return { x, y }
+        return { x, y };
     }
 
     /**
@@ -956,12 +954,13 @@ class Maze {
      */
     startMove() {
         // 监控键盘移动事件
-        window.addEventListener('keydown', this.keyHandler);
-        
+        window.addEventListener('keydown', this.keyDownHandler);
+        window.addEventListener('keyup', this.keyUpHandler);
+
         // 监控移动端重力感应器事件
         window.addEventListener('devicemotion', this.motionHandler);
     }
- 
+
     /**
      * 小球到达出口后的操作
      *
@@ -969,26 +968,29 @@ class Maze {
      */
     arriveExit() {
         // 停止控制小球
-        window.removeEventListener('keydown',      this.keyHandler);
+        window.removeEventListener('keydown', this.keyDownHandler);
+        window.removeEventListener('keyup', this.keyUpHandler);
         window.removeEventListener('devicemotion', this.motionHandler);
-        
+        this.curKey = '';
+        window.clearInterval(this.int);
+
         // 信息提示
         if (this.w === 101 && !this.useHint) {
             // 游戏彩蛋
-            var elModalTrigger = document.querySelector('.modal-trigger'),
-                elModalClose   = document.querySelector('.modal-close');
+            var elModalTrigger = document.querySelector(".modal-trigger"),
+                elModalClose = document.querySelector(".modal-close");
 
-            $('.fireworks').fireworks({
-                sound:   false,
+            $(".fireworks").fireworks({
+                sound: false,
                 opacity: 1,
-                width:   '80%',
-                height:  '100%'
+                width: "80%",
+                height: "100%",
             });
-            
+
             elModalTrigger.click();
 
-            elModalClose.addEventListener('click', () => {
-                $('.fireworks').html('');
+            elModalClose.addEventListener("click", () => {
+                $(".fireworks").html("");
             });
         } else {
             // 正常提示
@@ -996,77 +998,126 @@ class Maze {
                 html: `<span class="orange-text text-accent-4">
                         ✨✨恭喜抵达出口🎉🎉请重新开始游戏
                        </span>`,
-                displayLength: 3000
-            })
+                displayLength: 3000,
+            });
         }
     }
-}
 
-/**
- * 处理键盘移动事件的回调函数
- *
- * @param {Event} evt 传入的事件对象
- */
-function keyDownHandler(evt) {
-    // 上      左        下        右
-    // w       a         s         d
-    // ArrowUp ArrowLeft ArrowDown ArrowRight
+    /**
+     * 处理移动端重力感应移动事件的回调
+     *
+     * @param {Event} evt - 传入的事件对象
+     */
+    motionHandler(evt) {
+        var acc = evt.accelerationIncludingGravity;
 
-    // 不同方向的加速度
-    var step = 5;
+        // 右翻 x 为负，后翻 y 为正
+        // 不同方向的重力加速度比率，范围 [-10, 10]
+        var aX = -acc.x,
+            aY = acc.y;
 
-    // 阻止默认移动行为
-    evt.preventDefault();
-
-    switch (evt.key) {
-        case 'w':
-        case 'ArrowUp':
-            maze.moveBall(0, -step, false);
-            break;
-
-        case 'a':
-        case 'ArrowLeft':
-            maze.moveBall(-step, 0, false);
-            break;
-
-        case 's':
-        case 'ArrowDown':
-            maze.moveBall(0, step, false);
-            break;
-
-        case 'd':
-        case 'ArrowRight':
-            maze.moveBall(step, 0, false);
-            break;
-
-        default:
-            break;
+        this.moveBall(aX, aY, true);
     }
-}
 
-/**
- * 处理移动端重力感应移动事件的回调
- *
- * @param {Event} evt 传入的事件对象
- */
-function deviceMotionHandler(evt) {
-    var acc = evt.accelerationIncludingGravity;
+    /**
+     * 处理键盘移动事件的回调函数
+     *
+     * @param {Event} evt - 传入的事件对象
+     */
+    keyDownHandler(evt) {
+        // 上      左        下        右
+        // w       a         s         d
+        // ArrowUp ArrowLeft ArrowDown ArrowRight
 
-    // 右翻 x 为负，后翻 y 为正
-    // 不同方向的重力加速度比率，范围 [-10, 10]
-    var ax = -acc.x,
-        ay = acc.y;
+        // 阻止默认移动行为
+        evt.preventDefault();
 
-    maze.moveBall(ax, ay, true);
+        // 不同方向的加速度
+        var step = 5;
+        // 每次移动小球的延时
+        var delay = 30;
+
+        switch (evt.key) {
+            case "w":
+            case "ArrowUp":
+                if (this.curKey === 'up') break;
+
+                window.clearInterval(this.int);
+                this.curKey = 'up';
+                this.int = window.setInterval(
+                    this.moveBall.bind(this),
+                    delay,
+                    0,
+                    -step,
+                    false
+                );
+                break;
+
+            case "a":
+            case "ArrowLeft":
+                if (this.curKey === 'left') break;
+
+                window.clearInterval(this.int);
+                this.curKey = 'left';
+                this.int = window.setInterval(
+                    this.moveBall.bind(this),
+                    delay,
+                    -step,
+                    0,
+                    false
+                );
+                break;
+
+            case "s":
+            case "ArrowDown":
+                if (this.curKey === 'down') break;
+
+                window.clearInterval(this.int);
+                this.curKey = 'down';
+                this.int = window.setInterval(
+                    this.moveBall.bind(this),
+                    delay,
+                    0,
+                    step,
+                    false
+                );
+                break;
+
+            case "d":
+            case "ArrowRight":
+                if (this.curKey === 'right') break;
+
+                window.clearInterval(this.int);
+                this.curKey = 'right';
+                this.int = window.setInterval(
+                    this.moveBall.bind(this),
+                    delay,
+                    step,
+                    0,
+                    false
+                );
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    // 按键松开事件
+    keyUpHandler(evt) {
+        evt.preventDefault();
+        this.curKey = '';
+        window.clearInterval(this.int);
+    }
 }
 
 // 重新开始游戏
 function reGenMaze() {
     // 重新生成迷宫并移动小球
     maze = genMaze({
-        width:     +elMazeSize.value,
-        height:    +elMazeSize.value,
-        gameLevel: +elGameLevel.value
+        width: +elMazeSize.value,
+        height: +elMazeSize.value,
+        gameLevel: +elGameLevel.value,
     });
 }
 
@@ -1074,12 +1125,12 @@ function reGenMaze() {
 function startGame() {
     // 开始移动小球
     maze.startMove();
-    
-    // 禁用开始按钮
-    elStartGame.classList.add('disabled');
-    elStartGame.classList.remove('pulse');
 
-    if (typeof DeviceMotionEvent === 'undefined') {
+    // 禁用开始按钮
+    elStartGame.classList.add("disabled");
+    elStartGame.classList.remove("pulse");
+
+    if (typeof DeviceMotionEvent === "undefined") {
         M.toast({
             html: `<span class="red-text">
                      该浏览器不支持重力感应器！<br>
@@ -1088,41 +1139,42 @@ function startGame() {
                      </span>
                    </span>
                    `,
-            displayLength: 2000
-        })
+            displayLength: 2000,
+        });
     } else {
         M.toast({
             html: `<span class="teal-text text-accent-2">
                      游戏开始！<br>
                      请晃动手机，或使用方向键移动小球
                    </span>`,
-            displayLength: 2000
-        })
+            displayLength: 2000,
+        });
     }
 
     // 一定时间后显示提示按钮
     setTimeout(() => {
-        elGameHint.classList.remove('scale-out');
-        elGameHint.classList.add('scale-in');
+        elGameHint.classList.remove("scale-out");
+        elGameHint.classList.add("scale-in");
     }, 5000);
 }
 
 // 生成迷宫
 function genMaze(options) {
-    var _options = Object.assign({
-        elMaze:        elMaze,
-        elBall:        elBall,
-        keyHandler:    keyDownHandler,
-        motionHandler: deviceMotionHandler
-    }, options);
+    var _options = Object.assign(
+        {
+            elMaze: elMaze,
+            elBall: elBall,
+        },
+        options
+    );
 
     // 启用开始按钮
-    elStartGame.classList.remove('disabled');
-    elStartGame.classList.add('pulse');
+    elStartGame.classList.remove("disabled");
+    elStartGame.classList.add("pulse");
 
     // 隐藏提示按钮
-    elGameHint.classList.remove('scale-in');
-    elGameHint.classList.add('scale-out');
+    elGameHint.classList.remove("scale-in");
+    elGameHint.classList.add("scale-out");
 
     return new Maze(_options);
 }
@@ -1130,48 +1182,45 @@ function genMaze(options) {
 // 点击提示后绘制迷宫的解
 function drawHintPath() {
     // 隐藏提示按钮
-    elGameHint.classList.remove('scale-in');
-    elGameHint.classList.add('scale-out');
+    elGameHint.classList.remove("scale-in");
+    elGameHint.classList.add("scale-out");
 
     // 绘制迷宫的出路
     maze.drawCorrectPath(maze.exit.x, maze.exit.y);
 }
 
-var elMaze         = document.querySelector('#maze-map'),
-    elBall         = document.querySelector('#maze-ball'),
-    elMazeWrapper  = document.querySelector('.maze'),
-    elControl      = document.querySelector('.control'),
-    elStartGame    = document.querySelector('.start-game'),
-    elGameLevel    = document.querySelector('.game-level'),
-    elMazeSize     = document.querySelector('.maze-size'),
-    elGameHint     = document.querySelector('.game-hint');
+var elMaze = document.querySelector("#maze-map"),
+    elBall = document.querySelector("#maze-ball"),
+    elMazeWrapper = document.querySelector(".maze"),
+    elControl = document.querySelector(".control"),
+    elStartGame = document.querySelector(".start-game"),
+    elGameLevel = document.querySelector(".game-level"),
+    elMazeSize = document.querySelector(".maze-size"),
+    elGameHint = document.querySelector(".game-hint");
 
 var maze = genMaze();
 
-
 // 监听地图尺寸调整
-elMazeSize.addEventListener('change', function() {
+elMazeSize.addEventListener("change", function () {
     maze = genMaze({
-        width:     +this.value,
-        height:    +this.value,
-        gameLevel: +elGameLevel.value
+        width: +this.value,
+        height: +this.value,
+        gameLevel: +elGameLevel.value,
     });
-    
-    elMazeWrapper.style.width = maze.w * maze.step + 'px';
-    elMazeWrapper.style.zoom = elControl.clientWidth /
-                               (maze.w * maze.step)
+
+    elMazeWrapper.style.width = maze.w * maze.step + "px";
+    elMazeWrapper.style.zoom = elControl.clientWidth / (maze.w * maze.step);
 });
 
 // 监听游戏难度调整
-elGameLevel.addEventListener('change', function() {
+elGameLevel.addEventListener("change", function () {
     maze = genMaze({
-        width:     +elMazeSize.value,
-        height:    +elMazeSize.value,
-        gameLevel: +this.value
-    })
+        width: +elMazeSize.value,
+        height: +elMazeSize.value,
+        gameLevel: +this.value,
+    });
 });
 
 // 缩放迷宫地图以适应页面
-elMazeWrapper.style.width = maze.w * maze.step + 'px';
-elMazeWrapper.style.zoom = elControl.clientWidth /
-                           (maze.w * maze.step)
+elMazeWrapper.style.width = maze.w * maze.step + "px";
+elMazeWrapper.style.zoom = elControl.clientWidth / (maze.w * maze.step);
