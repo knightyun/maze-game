@@ -1130,6 +1130,36 @@ function startGame() {
     elStartGame.classList.add("disabled");
     elStartGame.classList.remove("pulse");
 
+    // 判断设备是否支持重力传感器
+    var accelerometer = null;
+    var detectError = false;
+    try {
+        accelerometer = new Accelerometer({ referenceFrame: 'device' });
+        accelerometer.addEventListener('error', event => {
+            // Handle runtime errors.
+            if (event.error.name === 'NotAllowedError') {
+                // Branch to code for requesting permission.
+            } else if (event.error.name === 'NotReadableError' ) {
+                // alert('错误：未能检测到传感器！');
+                detectError = true;
+            }
+        });
+        accelerometer.addEventListener('reading', () => reloadOnShake(accelerometer));
+        accelerometer.start();
+    } catch (error) {
+        // Handle construction errors.
+        if (error.name === 'SecurityError') {
+            // See the note above about feature policy.
+            // alert('错误：传感器构造被功能策略阻止！');
+            detectError = true;
+        } else if (error.name === 'ReferenceError') {
+            // alert('错误：用户代理不支持传感器！');
+            detectError = true;
+        } else {
+            throw error;
+        }
+    }
+
     if (typeof DeviceMotionEvent === "undefined") {
         M.toast({
             html: `<span class="red-text">
@@ -1142,13 +1172,26 @@ function startGame() {
             displayLength: 2000,
         });
     } else {
-        M.toast({
-            html: `<span class="teal-text text-accent-2">
-                     游戏开始！<br>
-                     请晃动手机，或使用方向键移动小球
-                   </span>`,
-            displayLength: 2000,
-        });
+        if (detectError) {
+            M.toast({
+                html: `<span class="teal-text text-accent-2">
+                         游戏开始！<br>
+                         当前设备可能<span class="red-text text-lighten-3"
+                         >不支持</span>重力感应器或<span class="red-text text-lighten-3"
+                         >检测失败</span>，<br>
+                         请尝试晃动手机，或者使用方向键移动小球<br>
+                       </span>`,
+                displayLength: 5000,
+            });
+        } else {
+            M.toast({
+                html: `<span class="teal-text text-accent-2">
+                         游戏开始！<br>
+                         请晃动手机，或使用方向键移动小球
+                       </span>`,
+                displayLength: 2000,
+            });
+        }
     }
 
     // 一定时间后显示提示按钮
